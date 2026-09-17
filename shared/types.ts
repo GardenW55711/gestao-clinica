@@ -116,3 +116,44 @@ export interface AppointmentInput {
   startAt: string
   notes?: string
 }
+
+export interface InventoryItemInput {
+  name: string
+  category?: string
+  unit: string
+  minQuantity: number
+  unitCost: number
+}
+
+export interface InventoryItemSummary {
+  id: string
+  name: string
+  category: string | null
+  unit: string
+  minQuantity: number
+  unitCost: number
+  currentQuantity: number
+  nextExpiry: string | null
+}
+
+export interface InventoryEntryInput {
+  itemId: string
+  quantity: number
+  expiryDate?: string
+  batchCode?: string
+}
+
+export interface InventoryExitInput {
+  itemId: string
+  quantity: number
+  reason?: string
+}
+
+export interface InventoryBatchAlert {
+  itemId: string
+  itemName: string
+  batchCode: string | null
+  quantity: number
+  expiryDate: string
+  status: 'expired' | 'expiring_soon'
+}

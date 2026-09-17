@@ -15,7 +15,12 @@ import type {
   ProcedureTypeInput,
   Appointment,
   AppointmentInput,
-  AppointmentStatus
+  AppointmentStatus,
+  InventoryItemInput,
+  InventoryItemSummary,
+  InventoryEntryInput,
+  InventoryExitInput,
+  InventoryBatchAlert
 } from '@shared/types'
 
 function crudApi<Dto, Input>(prefix: string): {
@@ -53,6 +58,17 @@ const api = {
       ipcRenderer.invoke('appointments:create', input),
     setStatus: (id: string, status: AppointmentStatus): Promise<ApiResult<null>> =>
       ipcRenderer.invoke('appointments:setStatus', { id, status })
+  },
+  inventory: {
+    listItems: (): Promise<ApiResult<InventoryItemSummary[]>> => ipcRenderer.invoke('inventory:items:list'),
+    createItem: (input: InventoryItemInput): Promise<ApiResult<InventoryItemSummary>> =>
+      ipcRenderer.invoke('inventory:items:create', input),
+    removeItem: (id: string): Promise<ApiResult<null>> => ipcRenderer.invoke('inventory:items:remove', id),
+    addEntry: (input: InventoryEntryInput): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('inventory:batches:addEntry', input),
+    addExit: (input: InventoryExitInput): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('inventory:movements:addExit', input),
+    expiringSoon: (): Promise<ApiResult<InventoryBatchAlert[]>> => ipcRenderer.invoke('inventory:batches:expiringSoon')
   }
 }
 

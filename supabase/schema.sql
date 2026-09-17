@@ -175,3 +175,70 @@ create policy "clinic manages its appointments"
   on public.appointments for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
   with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Fase 4: estoque ----------------------------------------------------------
+
+create table if not exists public.inventory_items (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  name text not null,
+  category text,
+  unit text not null,
+  min_quantity numeric not null default 0,
+  unit_cost numeric not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.inventory_items enable row level security;
+
+drop policy if exists "clinic manages its inventory items" on public.inventory_items;
+create policy "clinic manages its inventory items"
+  on public.inventory_items for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+create table if not exists public.inventory_batches (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  item_id uuid not null,
+  batch_code text,
+  quantity numeric not null,
+  expiry_date date,
+  received_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.inventory_batches enable row level security;
+
+drop policy if exists "clinic manages its inventory batches" on public.inventory_batches;
+create policy "clinic manages its inventory batches"
+  on public.inventory_batches for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+create table if not exists public.inventory_movements (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  item_id uuid not null,
+  batch_id uuid,
+  type text not null check (type in ('entrada','saida','ajuste')),
+  quantity numeric not null,
+  reason text,
+  related_sale_id uuid,
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.inventory_movements enable row level security;
+
+drop policy if exists "clinic manages its inventory movements" on public.inventory_movements;
+create policy "clinic manages its inventory movements"
+  on public.inventory_movements for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));

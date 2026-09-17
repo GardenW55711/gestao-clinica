@@ -16,7 +16,12 @@ import type {
   ProcedureTypeInput,
   Appointment,
   AppointmentInput,
-  AppointmentStatus
+  AppointmentStatus,
+  InventoryItemInput,
+  InventoryItemSummary,
+  InventoryEntryInput,
+  InventoryExitInput,
+  InventoryBatchAlert
 } from '@shared/types'
 
 interface CrudApi<Dto, Input> {
@@ -44,6 +49,14 @@ declare global {
         listByDate: (dateIso: string) => Promise<ApiResult<Appointment[]>>
         create: (input: AppointmentInput) => Promise<ApiResult<Appointment>>
         setStatus: (id: string, status: AppointmentStatus) => Promise<ApiResult<null>>
+      }
+      inventory: {
+        listItems: () => Promise<ApiResult<InventoryItemSummary[]>>
+        createItem: (input: InventoryItemInput) => Promise<ApiResult<InventoryItemSummary>>
+        removeItem: (id: string) => Promise<ApiResult<null>>
+        addEntry: (input: InventoryEntryInput) => Promise<ApiResult<null>>
+        addExit: (input: InventoryExitInput) => Promise<ApiResult<null>>
+        expiringSoon: () => Promise<ApiResult<InventoryBatchAlert[]>>
       }
     }
   }

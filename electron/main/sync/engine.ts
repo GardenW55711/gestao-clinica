@@ -3,7 +3,18 @@ import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabase } from '../supabase/client'
 import { getDb } from '../db/client'
-import { clinics, staffMembers, patients, professionals, rooms, procedureTypes, appointments } from '../db/schema'
+import {
+  clinics,
+  staffMembers,
+  patients,
+  professionals,
+  rooms,
+  procedureTypes,
+  appointments,
+  inventoryItems,
+  inventoryBatches,
+  inventoryMovements
+} from '../db/schema'
 
 /**
  * Motor de sincronização v1: empurra tudo que está "pending" pra nuvem,
@@ -137,6 +148,47 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       status: row.status,
       source: row.source,
       notes: row.notes,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pushPendingTable(supabase, inventoryItems, 'inventory_items', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      name: row.name,
+      category: row.category,
+      unit: row.unit,
+      min_quantity: row.minQuantity,
+      unit_cost: row.unitCost,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pushPendingTable(supabase, inventoryBatches, 'inventory_batches', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      item_id: row.itemId,
+      batch_code: row.batchCode,
+      quantity: row.quantity,
+      expiry_date: row.expiryDate,
+      received_at: row.receivedAt,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pushPendingTable(supabase, inventoryMovements, 'inventory_movements', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      item_id: row.itemId,
+      batch_id: row.batchId,
+      type: row.type,
+      quantity: row.quantity,
+      reason: row.reason,
+      related_sale_id: row.relatedSaleId,
+      created_by: row.createdBy,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt

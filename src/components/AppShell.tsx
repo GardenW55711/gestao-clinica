@@ -7,7 +7,8 @@ const links = [
   { to: '/patients', label: 'Pacientes', end: false },
   { to: '/professionals', label: 'Profissionais', end: false },
   { to: '/rooms', label: 'Salas', end: false },
-  { to: '/procedure-types', label: 'Tipos de procedimento', end: false }
+  { to: '/procedure-types', label: 'Tipos de procedimento', end: false },
+  { to: '/estoque', label: 'Estoque', end: false }
 ]
 
 export function AppShell(): JSX.Element {
@@ -28,7 +29,6 @@ export function AppShell(): JSX.Element {
               {link.label}
             </NavLink>
           ))}
-          <span className="nav-item disabled">Estoque (em breve)</span>
           <span className="nav-item disabled">Vendas (em breve)</span>
         </nav>
       </aside>
