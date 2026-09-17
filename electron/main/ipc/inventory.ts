@@ -4,6 +4,7 @@ import { and, eq, isNull, lte } from 'drizzle-orm'
 import { getDb } from '../db/client'
 import { inventoryItems, inventoryBatches, inventoryMovements } from '../db/schema'
 import { getCurrentClinicId, getCurrentStaffMemberId } from '../session'
+import { consumeInventoryFefo } from '../inventory/fefo'
 import type {
   ApiResult,
   InventoryItemInput,
@@ -169,56 +170,15 @@ export function registerInventoryHandlers(): void {
       const clinicId = requireClinicId()
       const db = getDb()
 
-      const batches = db
-        .select()
-        .from(inventoryBatches)
-        .where(and(eq(inventoryBatches.itemId, input.itemId), isNull(inventoryBatches.deletedAt)))
-        .all()
-        .filter((b) => b.quantity > 0)
-        .sort((a, b) => {
-          if (!a.expiryDate && !b.expiryDate) return 0
-          if (!a.expiryDate) return 1
-          if (!b.expiryDate) return -1
-          return a.expiryDate.localeCompare(b.expiryDate)
-        })
-
-      const available = batches.reduce((sum, b) => sum + b.quantity, 0)
-      if (available < input.quantity) {
-        throw new Error(`Estoque insuficiente (disponível: ${available})`)
-      }
-
       db.transaction((tx) => {
-        let remaining = input.quantity
-        const timestamp = nowIso()
-
-        for (const batch of batches) {
-          if (remaining <= 0) break
-          const take = Math.min(batch.quantity, remaining)
-          remaining -= take
-
-          tx.update(inventoryBatches)
-            .set({ quantity: batch.quantity - take, updatedAt: timestamp, syncStatus: 'pending' })
-            .where(eq(inventoryBatches.id, batch.id))
-            .run()
-
-          tx.insert(inventoryMovements)
-            .values({
-              id: randomUUID(),
-              clinicId,
-              itemId: input.itemId,
-              batchId: batch.id,
-              type: 'saida',
-              quantity: take,
-              reason: input.reason ?? null,
-              relatedSaleId: null,
-              createdBy: getCurrentStaffMemberId(),
-              createdAt: timestamp,
-              updatedAt: timestamp,
-              syncStatus: 'pending',
-              deletedAt: null
-            })
-            .run()
-        }
+        consumeInventoryFefo(tx, {
+          clinicId,
+          itemId: input.itemId,
+          quantity: input.quantity,
+          reason: input.reason ?? null,
+          relatedSaleId: null,
+          createdBy: getCurrentStaffMemberId()
+        })
       })
 
       return { ok: true, data: null }

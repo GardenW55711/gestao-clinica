@@ -322,3 +322,18 @@ button:disabled {
   font-weight: 600;
   font-size: 12px;
 }
+
+.sale-form {
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sale-total {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: right;
+  margin: 4px 0;
+}

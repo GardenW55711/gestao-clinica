@@ -20,7 +20,9 @@ import type {
   InventoryItemSummary,
   InventoryEntryInput,
   InventoryExitInput,
-  InventoryBatchAlert
+  InventoryBatchAlert,
+  Sale,
+  SaleInput
 } from '@shared/types'
 
 function crudApi<Dto, Input>(prefix: string): {
@@ -69,6 +71,10 @@ const api = {
     addExit: (input: InventoryExitInput): Promise<ApiResult<null>> =>
       ipcRenderer.invoke('inventory:movements:addExit', input),
     expiringSoon: (): Promise<ApiResult<InventoryBatchAlert[]>> => ipcRenderer.invoke('inventory:batches:expiringSoon')
+  },
+  sales: {
+    list: (): Promise<ApiResult<Sale[]>> => ipcRenderer.invoke('sales:list'),
+    create: (input: SaleInput): Promise<ApiResult<null>> => ipcRenderer.invoke('sales:create', input)
   }
 }
 

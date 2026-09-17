@@ -13,7 +13,9 @@ import {
   appointments,
   inventoryItems,
   inventoryBatches,
-  inventoryMovements
+  inventoryMovements,
+  sales,
+  saleItems
 } from '../db/schema'
 
 /**
@@ -189,6 +191,37 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       reason: row.reason,
       related_sale_id: row.relatedSaleId,
       created_by: row.createdBy,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pushPendingTable(supabase, sales, 'sales', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      patient_id: row.patientId,
+      appointment_id: row.appointmentId,
+      professional_id: row.professionalId,
+      total_amount: row.totalAmount,
+      payment_method: row.paymentMethod,
+      status: row.status,
+      created_by: row.createdBy,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pushPendingTable(supabase, saleItems, 'sale_items', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      sale_id: row.saleId,
+      description: row.description,
+      kind: row.kind,
+      procedure_type_id: row.procedureTypeId,
+      inventory_item_id: row.inventoryItemId,
+      quantity: row.quantity,
+      unit_price: row.unitPrice,
+      subtotal: row.subtotal,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt

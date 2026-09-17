@@ -157,3 +157,40 @@ export interface InventoryBatchAlert {
   expiryDate: string
   status: 'expired' | 'expiring_soon'
 }
+
+export type PaymentMethod = 'dinheiro' | 'cartao' | 'pix' | 'outro'
+
+export interface SaleItemInput {
+  kind: 'procedimento' | 'produto'
+  description: string
+  procedureTypeId?: string
+  inventoryItemId?: string
+  quantity: number
+  unitPrice: number
+}
+
+export interface SaleInput {
+  patientId: string
+  paymentMethod: PaymentMethod
+  items: SaleItemInput[]
+}
+
+export interface SaleItem {
+  id: string
+  description: string
+  kind: 'procedimento' | 'produto'
+  quantity: number
+  unitPrice: number
+  subtotal: number
+}
+
+export interface Sale {
+  id: string
+  patientId: string
+  patientName: string
+  totalAmount: number
+  paymentMethod: PaymentMethod
+  status: 'paga' | 'pendente'
+  createdAt: string
+  items: SaleItem[]
+}

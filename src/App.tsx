@@ -11,6 +11,7 @@ import { Professionals } from './pages/Professionals'
 import { Rooms } from './pages/Rooms'
 import { ProcedureTypes } from './pages/ProcedureTypes'
 import { Estoque } from './pages/Estoque'
+import { Vendas } from './pages/Vendas'
 import { ClinicContext } from './context/ClinicContext'
 import type { ClinicLoginResult, StaffSummary } from '@shared/types'
 
@@ -68,6 +69,7 @@ function App(): JSX.Element {
             <Route path="/rooms" element={<Rooms />} />
             <Route path="/procedure-types" element={<ProcedureTypes />} />
             <Route path="/estoque" element={<Estoque />} />
+            <Route path="/vendas" element={<Vendas />} />
           </Route>
         </Routes>
       </HashRouter>

@@ -242,3 +242,52 @@ create policy "clinic manages its inventory movements"
   on public.inventory_movements for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
   with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Fase 5: vendas ------------------------------------------------------------
+
+create table if not exists public.sales (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  patient_id uuid not null,
+  appointment_id uuid,
+  professional_id uuid,
+  total_amount numeric not null default 0,
+  payment_method text not null check (payment_method in ('dinheiro','cartao','pix','outro')),
+  status text not null check (status in ('paga','pendente')),
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.sales enable row level security;
+
+drop policy if exists "clinic manages its sales" on public.sales;
+create policy "clinic manages its sales"
+  on public.sales for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+create table if not exists public.sale_items (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  sale_id uuid not null,
+  description text not null,
+  kind text not null check (kind in ('procedimento','produto')),
+  procedure_type_id uuid,
+  inventory_item_id uuid,
+  quantity numeric not null default 1,
+  unit_price numeric not null default 0,
+  subtotal numeric not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.sale_items enable row level security;
+
+drop policy if exists "clinic manages its sale items" on public.sale_items;
+create policy "clinic manages its sale items"
+  on public.sale_items for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));

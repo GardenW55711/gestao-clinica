@@ -21,7 +21,9 @@ import type {
   InventoryItemSummary,
   InventoryEntryInput,
   InventoryExitInput,
-  InventoryBatchAlert
+  InventoryBatchAlert,
+  Sale,
+  SaleInput
 } from '@shared/types'
 
 interface CrudApi<Dto, Input> {
@@ -57,6 +59,10 @@ declare global {
         addEntry: (input: InventoryEntryInput) => Promise<ApiResult<null>>
         addExit: (input: InventoryExitInput) => Promise<ApiResult<null>>
         expiringSoon: () => Promise<ApiResult<InventoryBatchAlert[]>>
+      }
+      sales: {
+        list: () => Promise<ApiResult<Sale[]>>
+        create: (input: SaleInput) => Promise<ApiResult<null>>
       }
     }
   }
