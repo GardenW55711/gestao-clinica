@@ -298,7 +298,31 @@ create policy "clinic manages its sale items"
 -- papel, uma leitura bem restrita (nada de prontuário/telefone/e-mail) e a
 -- criação de pedidos de agendamento.
 
+create table if not exists public.booking_requests (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  patient_name text not null,
+  patient_phone text not null,
+  professional_id uuid,
+  procedure_type_id uuid,
+  desired_start_at timestamptz not null,
+  status text not null default 'pending_review' check (status in ('pending_review','accepted','rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
 alter table public.booking_requests add column if not exists professional_id uuid;
+
+alter table public.booking_requests enable row level security;
+
+-- A própria clínica (autenticada) também precisa ler/atualizar os pedidos
+-- que aprovar ou recusar na tela de Configurações.
+drop policy if exists "clinic manages its booking requests" on public.booking_requests;
+create policy "clinic manages its booking requests"
+  on public.booking_requests for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
 
 -- Dados públicos da clínica (nome + se autoagendamento está ligado) —
 -- necessário pra página saber o nome da clínica e se deve funcionar.
