@@ -13,7 +13,10 @@ import type {
   Room,
   RoomInput,
   ProcedureType,
-  ProcedureTypeInput
+  ProcedureTypeInput,
+  Appointment,
+  AppointmentInput,
+  AppointmentStatus
 } from '@shared/types'
 
 interface CrudApi<Dto, Input> {
@@ -37,6 +40,11 @@ declare global {
       professionals: CrudApi<Professional, ProfessionalInput>
       rooms: CrudApi<Room, RoomInput>
       procedureTypes: CrudApi<ProcedureType, ProcedureTypeInput>
+      appointments: {
+        listByDate: (dateIso: string) => Promise<ApiResult<Appointment[]>>
+        create: (input: AppointmentInput) => Promise<ApiResult<Appointment>>
+        setStatus: (id: string, status: AppointmentStatus) => Promise<ApiResult<null>>
+      }
     }
   }
 }

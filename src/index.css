@@ -189,3 +189,112 @@ button:disabled {
   margin: 0;
   padding: 0;
 }
+
+.agenda-toolbar {
+  margin-bottom: 16px;
+}
+
+.agenda-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.agenda-table th,
+.agenda-table td {
+  border: 1px solid #eee;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.agenda-table th {
+  background: #f4f5f7;
+  padding: 8px;
+}
+
+.agenda-time {
+  width: 60px;
+  padding: 6px 8px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.agenda-empty {
+  height: 32px;
+  cursor: pointer;
+  text-align: center;
+  color: #ccc;
+}
+
+.agenda-empty:hover {
+  background: #eef2ff;
+  color: #2563eb;
+}
+
+.agenda-appt {
+  padding: 6px 8px;
+  background: #dbeafe;
+  border-left: 3px solid #2563eb;
+}
+
+.agenda-appt.status-completed {
+  background: #dcfce7;
+  border-left-color: #16a34a;
+}
+
+.agenda-appt.status-cancelled,
+.agenda-appt.status-no_show {
+  background: #fee2e2;
+  border-left-color: #dc2626;
+  opacity: 0.75;
+}
+
+.agenda-appt-patient {
+  font-weight: 600;
+}
+
+.agenda-appt-proc {
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.agenda-appt select {
+  width: 100%;
+  font-size: 12px;
+  padding: 2px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal-card {
+  width: 380px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.modal-actions button {
+  margin-top: 0;
+  width: auto;
+  padding: 8px 16px;
+}
+
+.modal-actions button[type='button'] {
+  background: #e5e7eb;
+  color: #333;
+}

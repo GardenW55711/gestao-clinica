@@ -12,7 +12,10 @@ import type {
   Room,
   RoomInput,
   ProcedureType,
-  ProcedureTypeInput
+  ProcedureTypeInput,
+  Appointment,
+  AppointmentInput,
+  AppointmentStatus
 } from '@shared/types'
 
 function crudApi<Dto, Input>(prefix: string): {
@@ -42,7 +45,15 @@ const api = {
   patients: crudApi<Patient, PatientInput>('patients'),
   professionals: crudApi<Professional, ProfessionalInput>('professionals'),
   rooms: crudApi<Room, RoomInput>('rooms'),
-  procedureTypes: crudApi<ProcedureType, ProcedureTypeInput>('procedureTypes')
+  procedureTypes: crudApi<ProcedureType, ProcedureTypeInput>('procedureTypes'),
+  appointments: {
+    listByDate: (dateIso: string): Promise<ApiResult<Appointment[]>> =>
+      ipcRenderer.invoke('appointments:listByDate', dateIso),
+    create: (input: AppointmentInput): Promise<ApiResult<Appointment>> =>
+      ipcRenderer.invoke('appointments:create', input),
+    setStatus: (id: string, status: AppointmentStatus): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('appointments:setStatus', { id, status })
+  }
 }
 
 if (process.contextIsolated) {

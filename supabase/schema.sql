@@ -148,3 +148,30 @@ create policy "clinic manages its procedure types"
   on public.procedure_types for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
   with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Fase 3: agendamentos -----------------------------------------------------
+
+create table if not exists public.appointments (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  patient_id uuid not null,
+  professional_id uuid not null,
+  room_id uuid,
+  procedure_type_id uuid not null,
+  start_at timestamptz not null,
+  end_at timestamptz not null,
+  status text not null check (status in ('scheduled','confirmed','completed','cancelled','no_show')),
+  source text not null check (source in ('staff','patient_self')),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.appointments enable row level security;
+
+drop policy if exists "clinic manages its appointments" on public.appointments;
+create policy "clinic manages its appointments"
+  on public.appointments for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));

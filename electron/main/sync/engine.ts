@@ -3,7 +3,7 @@ import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabase } from '../supabase/client'
 import { getDb } from '../db/client'
-import { clinics, staffMembers, patients, professionals, rooms, procedureTypes } from '../db/schema'
+import { clinics, staffMembers, patients, professionals, rooms, procedureTypes, appointments } from '../db/schema'
 
 /**
  * Motor de sincronização v1: empurra tudo que está "pending" pra nuvem,
@@ -120,6 +120,23 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       requires_room: row.requiresRoom,
       bookable_online: row.bookableOnline,
       active: row.active,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pushPendingTable(supabase, appointments, 'appointments', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      patient_id: row.patientId,
+      professional_id: row.professionalId,
+      room_id: row.roomId,
+      procedure_type_id: row.procedureTypeId,
+      start_at: row.startAt,
+      end_at: row.endAt,
+      status: row.status,
+      source: row.source,
+      notes: row.notes,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt

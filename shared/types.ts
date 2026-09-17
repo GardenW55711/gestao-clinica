@@ -89,3 +89,30 @@ export interface ProcedureTypeInput {
   defaultPrice: number
   requiresRoom: boolean
 }
+
+export type AppointmentStatus = 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
+
+export interface Appointment {
+  id: string
+  patientId: string
+  patientName: string
+  professionalId: string
+  professionalName: string
+  roomId: string | null
+  roomName: string | null
+  procedureTypeId: string
+  procedureTypeName: string
+  startAt: string
+  endAt: string
+  status: AppointmentStatus
+  notes: string | null
+}
+
+export interface AppointmentInput {
+  patientId: string
+  professionalId: string
+  roomId?: string
+  procedureTypeId: string
+  startAt: string
+  notes?: string
+}

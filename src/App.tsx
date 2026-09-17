@@ -5,6 +5,7 @@ import { ClinicLogin } from './pages/ClinicLogin'
 import { StaffPicker } from './pages/StaffPicker'
 import { AppShell } from './components/AppShell'
 import { Home } from './pages/Home'
+import { Agenda } from './pages/Agenda'
 import { Patients } from './pages/Patients'
 import { Professionals } from './pages/Professionals'
 import { Rooms } from './pages/Rooms'
@@ -60,6 +61,7 @@ function App(): JSX.Element {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<Home />} />
+            <Route path="/agenda" element={<Agenda />} />
             <Route path="/patients" element={<Patients />} />
             <Route path="/professionals" element={<Professionals />} />
             <Route path="/rooms" element={<Rooms />} />
