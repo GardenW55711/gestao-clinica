@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc/handlers'
+import { registerCatalogHandlers } from './ipc/catalog'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -42,6 +43,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('app:ping', () => 'pong')
   registerIpcHandlers()
+  registerCatalogHandlers()
 
   createWindow()
 

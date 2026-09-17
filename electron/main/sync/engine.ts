@@ -1,15 +1,39 @@
 import { eq } from 'drizzle-orm'
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabase } from '../supabase/client'
 import { getDb } from '../db/client'
-import { clinics, staffMembers } from '../db/schema'
+import { clinics, staffMembers, patients, professionals, rooms, procedureTypes } from '../db/schema'
 
 /**
- * Motor de sincronização v1: empurra a clínica e os funcionários pendentes
- * pra nuvem. Chamado depois de criar a clínica, depois do login, e por um
- * botão manual. Se não houver internet ou sessão na nuvem, falha em silêncio
- * e tudo continua marcado como "pending" pra tentar de novo depois — o app
- * nunca trava esperando a nuvem.
+ * Motor de sincronização v1: empurra tudo que está "pending" pra nuvem,
+ * tabela por tabela. Chamado depois de criar a clínica, depois do login, por
+ * um botão manual e automaticamente a cada 1 minuto. Se não houver internet
+ * ou sessão na nuvem, falha em silêncio e tudo continua "pending" pra
+ * tentar de novo depois — o app nunca trava esperando a nuvem.
  */
+async function pushPendingTable(
+  supabase: SupabaseClient,
+  table: SQLiteTable,
+  supabaseTableName: string,
+  toRemote: (row: Record<string, unknown>) => Record<string, unknown>
+): Promise<void> {
+  const db = getDb()
+  const t = table as unknown as { id: never; syncStatus: never }
+  const pending = db.select().from(table as never).where(eq(t.syncStatus, 'pending')).all() as Array<
+    Record<string, unknown>
+  >
+
+  for (const row of pending) {
+    const { error } = await supabase.from(supabaseTableName).upsert(toRemote(row))
+    if (error) throw new Error(`${supabaseTableName}: ${error.message}`)
+    db.update(table as never)
+      .set({ syncStatus: 'synced' } as never)
+      .where(eq(t.id, row.id as string))
+      .run()
+  }
+}
+
 export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolean; error?: string }> {
   const supabase = getSupabase()
   if (!supabase) return { ok: false, error: 'Nuvem não configurada' }
@@ -34,26 +58,72 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       created_at: clinic.createdAt,
       updated_at: clinic.updatedAt
     })
-    if (clinicError) throw new Error(clinicError.message)
+    if (clinicError) throw new Error(`clinics: ${clinicError.message}`)
 
-    const pendingStaff = db.select().from(staffMembers).where(eq(staffMembers.syncStatus, 'pending')).all()
+    await pushPendingTable(supabase, staffMembers, 'staff_members', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      name: row.name,
+      role: row.role,
+      pin_hash: row.pinHash,
+      active: row.active,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
 
-    for (const member of pendingStaff) {
-      const { error: staffError } = await supabase.from('staff_members').upsert({
-        id: member.id,
-        clinic_id: member.clinicId,
-        name: member.name,
-        role: member.role,
-        pin_hash: member.pinHash,
-        active: member.active,
-        created_at: member.createdAt,
-        updated_at: member.updatedAt,
-        deleted_at: member.deletedAt
-      })
-      if (staffError) throw new Error(staffError.message)
+    await pushPendingTable(supabase, patients, 'patients', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      name: row.name,
+      phone: row.phone,
+      email: row.email,
+      birth_date: row.birthDate,
+      cpf: row.cpf,
+      notes: row.notes,
+      lgpd_consent_at: row.lgpdConsentAt,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
 
-      db.update(staffMembers).set({ syncStatus: 'synced' }).where(eq(staffMembers.id, member.id)).run()
-    }
+    await pushPendingTable(supabase, professionals, 'professionals', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      staff_member_id: row.staffMemberId,
+      name: row.name,
+      specialty: row.specialty,
+      color: row.color,
+      active: row.active,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pushPendingTable(supabase, rooms, 'rooms', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      name: row.name,
+      description: row.description,
+      active: row.active,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pushPendingTable(supabase, procedureTypes, 'procedure_types', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      name: row.name,
+      duration_minutes: row.durationMinutes,
+      default_price: row.defaultPrice,
+      requires_room: row.requiresRoom,
+      bookable_online: row.bookableOnline,
+      active: row.active,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
 
     return { ok: true }
   } catch (error) {

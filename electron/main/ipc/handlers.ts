@@ -13,9 +13,8 @@ import {
 import { clinics, staffMembers, auditLog } from '../db/schema'
 import { signInClinic, signUpClinic } from '../supabase/client'
 import { syncClinicAndStaff } from '../sync/engine'
+import { setCurrentSession, getCurrentClinicId, setCurrentStaffMember } from '../session'
 import type { ApiResult, ClinicLoginResult, ClinicSetupInput, StaffSummary } from '@shared/types'
-
-let currentClinicId: string | null = null
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -58,7 +57,8 @@ export function registerIpcHandlers(): void {
   // que houver uma clínica logada. Se estiver offline, falha em silêncio e
   // tenta de novo no próximo ciclo — nunca interrompe o uso do programa.
   setInterval(() => {
-    if (currentClinicId) syncClinicAndStaff(currentClinicId).catch(() => undefined)
+    const clinicId = getCurrentClinicId()
+    if (clinicId) syncClinicAndStaff(clinicId).catch(() => undefined)
   }, SYNC_INTERVAL_MS)
 
   ipcMain.handle('clinic:exists', (): boolean => hasClinicSetup())
@@ -110,7 +110,7 @@ export function registerIpcHandlers(): void {
         .run()
 
       writeAudit(clinicId, ownerId, 'clinic_created', 'clinics')
-      currentClinicId = clinicId
+      setCurrentSession(clinicId)
 
       // Tenta criar a conta da clínica na nuvem e subir os dados em segundo
       // plano — nunca atrasa nem trava a criação local da clínica.
@@ -129,11 +129,11 @@ export function registerIpcHandlers(): void {
     try {
       openClinicDatabase(masterPassword)
       const meta = readMeta()
-      currentClinicId = meta?.clinicId ?? null
+      setCurrentSession(meta?.clinicId ?? null)
 
       if (meta) {
         signInClinic(meta.ownerEmail, masterPassword)
-          .then((signedIn) => (signedIn && currentClinicId ? syncClinicAndStaff(currentClinicId) : undefined))
+          .then((signedIn) => (signedIn ? syncClinicAndStaff(meta.clinicId) : undefined))
           .catch(() => undefined)
       }
 
@@ -144,8 +144,9 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('sync:now', async (): Promise<ApiResult<null>> => {
-    if (!currentClinicId) return { ok: false, error: 'Nenhuma clínica logada' }
-    const result = await syncClinicAndStaff(currentClinicId)
+    const clinicId = getCurrentClinicId()
+    if (!clinicId) return { ok: false, error: 'Nenhuma clínica logada' }
+    const result = await syncClinicAndStaff(clinicId)
     return { ok: result.ok, error: result.error, data: null }
   })
 
@@ -161,6 +162,7 @@ export function registerIpcHandlers(): void {
         if (!valid) throw new Error('PIN incorreto')
 
         writeAudit(staff.clinicId, staff.id, 'staff_login', 'staff_members')
+        setCurrentStaffMember(staff.id)
 
         return { ok: true, data: { id: staff.id, name: staff.name, role: staff.role } }
       } catch (error) {

@@ -51,3 +51,87 @@ create policy "clinic manages its staff"
   on public.staff_members for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
   with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Fase 2: cadastros base (pacientes, profissionais, salas, tipos de procedimento).
+-- Todas seguem o mesmo padrão de política de RLS: só a própria clínica lê/escreve.
+
+create table if not exists public.patients (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  name text not null,
+  phone text,
+  email text,
+  birth_date date,
+  cpf text,
+  notes text,
+  lgpd_consent_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.patients enable row level security;
+
+create policy "clinic manages its patients"
+  on public.patients for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+create table if not exists public.professionals (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  staff_member_id uuid,
+  name text not null,
+  specialty text,
+  color text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.professionals enable row level security;
+
+create policy "clinic manages its professionals"
+  on public.professionals for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+create table if not exists public.rooms (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  name text not null,
+  description text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.rooms enable row level security;
+
+create policy "clinic manages its rooms"
+  on public.rooms for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+create table if not exists public.procedure_types (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  name text not null,
+  duration_minutes integer not null,
+  default_price numeric not null default 0,
+  requires_room boolean not null default false,
+  bookable_online boolean not null default false,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.procedure_types enable row level security;
+
+create policy "clinic manages its procedure types"
+  on public.procedure_types for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));

@@ -1,6 +1,33 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { ApiResult, ClinicLoginResult, ClinicSetupInput, StaffSummary } from '@shared/types'
+import type {
+  ApiResult,
+  ClinicLoginResult,
+  ClinicSetupInput,
+  StaffSummary,
+  Patient,
+  PatientInput,
+  Professional,
+  ProfessionalInput,
+  Room,
+  RoomInput,
+  ProcedureType,
+  ProcedureTypeInput
+} from '@shared/types'
+
+function crudApi<Dto, Input>(prefix: string): {
+  list: () => Promise<ApiResult<Dto[]>>
+  create: (input: Input) => Promise<ApiResult<Dto>>
+  update: (id: string, input: Input) => Promise<ApiResult<Dto>>
+  remove: (id: string) => Promise<ApiResult<null>>
+} {
+  return {
+    list: () => ipcRenderer.invoke(`${prefix}:list`),
+    create: (input: Input) => ipcRenderer.invoke(`${prefix}:create`, input),
+    update: (id: string, input: Input) => ipcRenderer.invoke(`${prefix}:update`, { id, input }),
+    remove: (id: string) => ipcRenderer.invoke(`${prefix}:remove`, id)
+  }
+}
 
 const api = {
   ping: (): Promise<string> => ipcRenderer.invoke('app:ping'),
@@ -11,7 +38,11 @@ const api = {
     ipcRenderer.invoke('clinic:login', masterPassword),
   staffVerifyPin: (staffMemberId: string, pin: string): Promise<ApiResult<StaffSummary>> =>
     ipcRenderer.invoke('staff:verifyPin', { staffMemberId, pin }),
-  syncNow: (): Promise<ApiResult<null>> => ipcRenderer.invoke('sync:now')
+  syncNow: (): Promise<ApiResult<null>> => ipcRenderer.invoke('sync:now'),
+  patients: crudApi<Patient, PatientInput>('patients'),
+  professionals: crudApi<Professional, ProfessionalInput>('professionals'),
+  rooms: crudApi<Room, RoomInput>('rooms'),
+  procedureTypes: crudApi<ProcedureType, ProcedureTypeInput>('procedureTypes')
 }
 
 if (process.contextIsolated) {
