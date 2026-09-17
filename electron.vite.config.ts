@@ -26,6 +26,11 @@ export default defineConfig({
           index: resolve(__dirname, 'electron/preload/index.ts')
         }
       }
+    },
+    resolve: {
+      alias: {
+        '@shared': resolve(__dirname, 'shared')
+      }
     }
   },
   renderer: {
