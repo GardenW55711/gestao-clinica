@@ -12,6 +12,7 @@ declare global {
       clinicCreate: (input: ClinicSetupInput) => Promise<ApiResult<ClinicLoginResult>>
       clinicLogin: (masterPassword: string) => Promise<ApiResult<ClinicLoginResult>>
       staffVerifyPin: (staffMemberId: string, pin: string) => Promise<ApiResult<StaffSummary>>
+      syncNow: () => Promise<ApiResult<null>>
     }
   }
 }

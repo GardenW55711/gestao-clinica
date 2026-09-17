@@ -23,7 +23,8 @@
     "drizzle-orm": "^0.36.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0"
+    "react-router-dom": "^6.28.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -33,6 +34,7 @@
     "@types/node": "^22.9.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^4.3.3",
     "drizzle-kit": "^0.28.1",
     "electron": "^33.2.0",

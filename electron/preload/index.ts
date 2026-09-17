@@ -10,7 +10,8 @@ const api = {
   clinicLogin: (masterPassword: string): Promise<ApiResult<ClinicLoginResult>> =>
     ipcRenderer.invoke('clinic:login', masterPassword),
   staffVerifyPin: (staffMemberId: string, pin: string): Promise<ApiResult<StaffSummary>> =>
-    ipcRenderer.invoke('staff:verifyPin', { staffMemberId, pin })
+    ipcRenderer.invoke('staff:verifyPin', { staffMemberId, pin }),
+  syncNow: (): Promise<ApiResult<null>> => ipcRenderer.invoke('sync:now')
 }
 
 if (process.contextIsolated) {

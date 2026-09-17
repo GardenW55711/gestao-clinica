@@ -7,10 +7,15 @@ import {
   openClinicDatabase,
   closeClinicDatabase,
   hasClinicSetup,
+  readMeta,
   getDb
 } from '../db/client'
 import { clinics, staffMembers, auditLog } from '../db/schema'
+import { signInClinic, signUpClinic } from '../supabase/client'
+import { syncClinicAndStaff } from '../sync/engine'
 import type { ApiResult, ClinicLoginResult, ClinicSetupInput, StaffSummary } from '@shared/types'
+
+let currentClinicId: string | null = null
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -96,6 +101,13 @@ export function registerIpcHandlers(): void {
         .run()
 
       writeAudit(clinicId, ownerId, 'clinic_created', 'clinics')
+      currentClinicId = clinicId
+
+      // Tenta criar a conta da clínica na nuvem e subir os dados em segundo
+      // plano — nunca atrasa nem trava a criação local da clínica.
+      signUpClinic(input.ownerEmail, input.masterPassword)
+        .then((signedUp) => (signedUp ? syncClinicAndStaff(clinicId) : undefined))
+        .catch(() => undefined)
 
       return { ok: true, data: loadClinicLoginResult() }
     } catch (error) {
@@ -107,10 +119,25 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('clinic:login', (_event, masterPassword: string): ApiResult<ClinicLoginResult> => {
     try {
       openClinicDatabase(masterPassword)
+      const meta = readMeta()
+      currentClinicId = meta?.clinicId ?? null
+
+      if (meta) {
+        signInClinic(meta.ownerEmail, masterPassword)
+          .then((signedIn) => (signedIn && currentClinicId ? syncClinicAndStaff(currentClinicId) : undefined))
+          .catch(() => undefined)
+      }
+
       return { ok: true, data: loadClinicLoginResult() }
     } catch (error) {
       return { ok: false, error: (error as Error).message }
     }
+  })
+
+  ipcMain.handle('sync:now', async (): Promise<ApiResult<null>> => {
+    if (!currentClinicId) return { ok: false, error: 'Nenhuma clínica logada' }
+    const result = await syncClinicAndStaff(currentClinicId)
+    return { ok: result.ok, error: result.error, data: null }
   })
 
   ipcMain.handle(
