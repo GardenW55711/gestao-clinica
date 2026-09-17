@@ -1,0 +1,12 @@
+node_modules/
+out/
+dist/
+dist-electron/
+release/
+*.log
+.env
+.env.local
+*.sqlite
+*.sqlite3
+*.db
+.DS_Store
