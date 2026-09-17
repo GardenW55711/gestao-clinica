@@ -55,7 +55,9 @@ export async function signUpClinic(email: string, password: string): Promise<boo
     const { data, error } = await withTimeout(supabase.auth.signUp({ email, password }), 10000)
     if (error) {
       console.error('[supabase] signUp error:', error.message)
-      return false
+      // Se a conta já existe (ex: tentativa anterior que falhou no meio do
+      // caminho), tenta logar em vez de desistir.
+      return signInClinic(email, password)
     }
     if (data.session) return true
     // Sem sessão = provavelmente exige confirmação por e-mail; tenta logar
