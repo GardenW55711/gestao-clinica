@@ -1,4 +1,9 @@
--- Schema inicial da nuvem (Supabase) — Fase 1
+-- Schema da nuvem (Supabase). Pode ser rodado inteiro de novo a qualquer
+-- momento sem dar erro (todo "create" tem um "if not exists"/"drop if exists"
+-- na frente) — é seguro colar o arquivo inteiro no SQL Editor sempre que
+-- adicionarmos uma tabela nova em vez de precisar achar só o trecho novo.
+
+-- Fase 1: clínica (conta na nuvem) e funcionários -----------------------
 -- Cada clínica tem exatamente 1 conta de login (Supabase Auth). As políticas de
 -- RLS abaixo garantem, dentro do próprio banco, que uma clínica só enxerga e
 -- só grava linhas com o seu próprio clinic_id — isso é o isolamento multi-tenant.
@@ -18,14 +23,17 @@ create unique index if not exists clinics_auth_user_id_key on public.clinics(aut
 
 alter table public.clinics enable row level security;
 
+drop policy if exists "clinic can read own row" on public.clinics;
 create policy "clinic can read own row"
   on public.clinics for select
   using (auth_user_id = auth.uid());
 
+drop policy if exists "clinic can insert own row" on public.clinics;
 create policy "clinic can insert own row"
   on public.clinics for insert
   with check (auth_user_id = auth.uid());
 
+drop policy if exists "clinic can update own row" on public.clinics;
 create policy "clinic can update own row"
   on public.clinics for update
   using (auth_user_id = auth.uid());
@@ -47,12 +55,13 @@ create table if not exists public.staff_members (
 
 alter table public.staff_members enable row level security;
 
+drop policy if exists "clinic manages its staff" on public.staff_members;
 create policy "clinic manages its staff"
   on public.staff_members for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
   with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
 
--- Fase 2: cadastros base (pacientes, profissionais, salas, tipos de procedimento).
+-- Fase 2: cadastros base (pacientes, profissionais, salas, tipos de procedimento) --
 -- Todas seguem o mesmo padrão de política de RLS: só a própria clínica lê/escreve.
 
 create table if not exists public.patients (
@@ -72,6 +81,7 @@ create table if not exists public.patients (
 
 alter table public.patients enable row level security;
 
+drop policy if exists "clinic manages its patients" on public.patients;
 create policy "clinic manages its patients"
   on public.patients for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
@@ -92,6 +102,7 @@ create table if not exists public.professionals (
 
 alter table public.professionals enable row level security;
 
+drop policy if exists "clinic manages its professionals" on public.professionals;
 create policy "clinic manages its professionals"
   on public.professionals for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
@@ -110,6 +121,7 @@ create table if not exists public.rooms (
 
 alter table public.rooms enable row level security;
 
+drop policy if exists "clinic manages its rooms" on public.rooms;
 create policy "clinic manages its rooms"
   on public.rooms for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
@@ -131,6 +143,7 @@ create table if not exists public.procedure_types (
 
 alter table public.procedure_types enable row level security;
 
+drop policy if exists "clinic manages its procedure types" on public.procedure_types;
 create policy "clinic manages its procedure types"
   on public.procedure_types for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
