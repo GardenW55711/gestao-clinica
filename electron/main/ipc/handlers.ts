@@ -51,7 +51,16 @@ function loadClinicLoginResult(): ClinicLoginResult {
   return { clinicName: clinic.name, staff: staff as StaffSummary[] }
 }
 
+const SYNC_INTERVAL_MS = 60_000
+
 export function registerIpcHandlers(): void {
+  // Sincronização automática em segundo plano: tenta a cada 1 minuto sempre
+  // que houver uma clínica logada. Se estiver offline, falha em silêncio e
+  // tenta de novo no próximo ciclo — nunca interrompe o uso do programa.
+  setInterval(() => {
+    if (currentClinicId) syncClinicAndStaff(currentClinicId).catch(() => undefined)
+  }, SYNC_INTERVAL_MS)
+
   ipcMain.handle('clinic:exists', (): boolean => hasClinicSetup())
 
   ipcMain.handle('clinic:create', (_event, input: ClinicSetupInput): ApiResult<ClinicLoginResult> => {
