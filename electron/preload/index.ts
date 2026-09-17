@@ -22,7 +22,9 @@ import type {
   InventoryExitInput,
   InventoryBatchAlert,
   Sale,
-  SaleInput
+  SaleInput,
+  ClinicSettings,
+  BookingRequestSummary
 } from '@shared/types'
 
 function crudApi<Dto, Input>(prefix: string): {
@@ -75,6 +77,18 @@ const api = {
   sales: {
     list: (): Promise<ApiResult<Sale[]>> => ipcRenderer.invoke('sales:list'),
     create: (input: SaleInput): Promise<ApiResult<null>> => ipcRenderer.invoke('sales:create', input)
+  },
+  clinicSettings: {
+    get: (): Promise<ApiResult<ClinicSettings>> => ipcRenderer.invoke('clinic:getSettings'),
+    setSelfBooking: (enabled: boolean): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('clinic:setSelfBooking', enabled)
+  },
+  procedureTypeBookable: (id: string, enabled: boolean): Promise<ApiResult<null>> =>
+    ipcRenderer.invoke('procedureTypes:setBookableOnline', { id, enabled }),
+  bookingRequests: {
+    listPending: (): Promise<ApiResult<BookingRequestSummary[]>> => ipcRenderer.invoke('bookingRequests:listPending'),
+    approve: (id: string): Promise<ApiResult<null>> => ipcRenderer.invoke('bookingRequests:approve', id),
+    reject: (id: string): Promise<ApiResult<null>> => ipcRenderer.invoke('bookingRequests:reject', id)
   }
 }
 

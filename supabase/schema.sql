@@ -291,3 +291,64 @@ create policy "clinic manages its sale items"
   on public.sale_items for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
   with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Fase 6: autoagendamento online --------------------------------------------
+-- A página pública de agendamento não faz login (o paciente não tem conta).
+-- Ela usa o papel "anon" do Supabase, então aqui liberamos, só pra esse
+-- papel, uma leitura bem restrita (nada de prontuário/telefone/e-mail) e a
+-- criação de pedidos de agendamento.
+
+alter table public.booking_requests add column if not exists professional_id uuid;
+
+-- Dados públicos da clínica (nome + se autoagendamento está ligado) —
+-- necessário pra página saber o nome da clínica e se deve funcionar.
+grant select on public.clinics to anon;
+drop policy if exists "public can read bookable clinics" on public.clinics;
+create policy "public can read bookable clinics"
+  on public.clinics for select
+  to anon
+  using (self_booking_enabled = true);
+
+-- Profissionais ativos das clínicas com autoagendamento ligado.
+grant select on public.professionals to anon;
+drop policy if exists "public can read professionals of bookable clinics" on public.professionals;
+create policy "public can read professionals of bookable clinics"
+  on public.professionals for select
+  to anon
+  using (
+    active = true
+    and clinic_id in (select id from public.clinics where self_booking_enabled = true)
+  );
+
+-- Tipos de procedimento marcados como disponíveis para autoagendamento.
+grant select on public.procedure_types to anon;
+drop policy if exists "public can read bookable procedure types" on public.procedure_types;
+create policy "public can read bookable procedure types"
+  on public.procedure_types for select
+  to anon
+  using (
+    active = true
+    and bookable_online = true
+    and clinic_id in (select id from public.clinics where self_booking_enabled = true)
+  );
+
+-- Horários ocupados (sem nome de paciente nem observações) — só o suficiente
+-- pra página pública saber quais horários NÃO oferecer. Como essa view é
+-- dona do schema "public" (não do paciente), ela ignora a RLS da tabela
+-- appointments e decide sozinha o que expor, através do WHERE abaixo.
+create or replace view public.public_busy_slots as
+select clinic_id, professional_id, start_at, end_at
+from public.appointments
+where status <> 'cancelled'
+  and deleted_at is null
+  and clinic_id in (select id from public.clinics where self_booking_enabled = true);
+
+grant select on public.public_busy_slots to anon;
+
+-- Pedido de agendamento enviado pelo paciente pela página pública.
+grant insert on public.booking_requests to anon;
+drop policy if exists "public can create booking requests" on public.booking_requests;
+create policy "public can create booking requests"
+  on public.booking_requests for insert
+  to anon
+  with check (clinic_id in (select id from public.clinics where self_booking_enabled = true));

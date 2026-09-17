@@ -143,6 +143,7 @@ export const bookingRequests = sqliteTable('booking_requests', {
   ...tenantColumns,
   patientName: text('patient_name').notNull(),
   patientPhone: text('patient_phone').notNull(),
+  professionalId: text('professional_id'),
   procedureTypeId: text('procedure_type_id'),
   desiredStartAt: text('desired_start_at').notNull(),
   status: text('status', { enum: ['pending_review', 'accepted', 'rejected'] })

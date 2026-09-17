@@ -1,0 +1,1 @@
+ALTER TABLE `booking_requests` ADD `professional_id` text;

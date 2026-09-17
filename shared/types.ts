@@ -194,3 +194,21 @@ export interface Sale {
   createdAt: string
   items: SaleItem[]
 }
+
+export interface ClinicSettings {
+  clinicId: string
+  clinicName: string
+  selfBookingEnabled: boolean
+}
+
+export interface BookingRequestSummary {
+  id: string
+  patientName: string
+  patientPhone: string
+  professionalId: string | null
+  professionalName: string | null
+  procedureTypeId: string | null
+  procedureTypeName: string | null
+  desiredStartAt: string
+  status: 'pending_review' | 'accepted' | 'rejected'
+}

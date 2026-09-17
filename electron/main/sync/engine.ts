@@ -15,7 +15,8 @@ import {
   inventoryBatches,
   inventoryMovements,
   sales,
-  saleItems
+  saleItems,
+  bookingRequests
 } from '../db/schema'
 
 /**
@@ -227,8 +228,72 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       deleted_at: row.deletedAt
     }))
 
+    await pushPendingTable(supabase, bookingRequests, 'booking_requests', (row) => ({
+      id: row.id,
+      clinic_id: row.clinicId,
+      patient_name: row.patientName,
+      patient_phone: row.patientPhone,
+      professional_id: row.professionalId,
+      procedure_type_id: row.procedureTypeId,
+      desired_start_at: row.desiredStartAt,
+      status: row.status,
+      created_at: row.createdAt,
+      updated_at: row.updatedAt,
+      deleted_at: row.deletedAt
+    }))
+
+    await pullNewBookingRequests(supabase, clinicId)
+
     return { ok: true }
   } catch (error) {
     return { ok: false, error: (error as Error).message }
+  }
+}
+
+/**
+ * Baixa da nuvem os pedidos de agendamento novos, enviados pela página
+ * pública de autoagendamento (que não existe no banco local até alguém de
+ * fora mandar um pedido). É o primeiro lugar onde este app puxa dado da
+ * nuvem em vez de só empurrar — o resto continua só enviando.
+ */
+async function pullNewBookingRequests(supabase: SupabaseClient, clinicId: string): Promise<void> {
+  const db = getDb()
+
+  const localIds = db
+    .select({ id: bookingRequests.id })
+    .from(bookingRequests)
+    .all()
+    .map((r) => r.id)
+
+  const { data: remoteRows, error } = await supabase
+    .from('booking_requests')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('status', 'pending_review')
+
+  if (error) throw new Error(`booking_requests (baixar): ${error.message}`)
+  if (!remoteRows) return
+
+  const newRows = localIds.length
+    ? remoteRows.filter((r) => !localIds.includes(r.id))
+    : remoteRows
+
+  for (const row of newRows) {
+    db.insert(bookingRequests)
+      .values({
+        id: row.id,
+        clinicId: row.clinic_id,
+        patientName: row.patient_name,
+        patientPhone: row.patient_phone,
+        professionalId: row.professional_id,
+        procedureTypeId: row.procedure_type_id,
+        desiredStartAt: row.desired_start_at,
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        syncStatus: 'synced',
+        deletedAt: row.deleted_at
+      })
+      .run()
   }
 }

@@ -337,3 +337,27 @@ button:disabled {
   text-align: right;
   margin: 4px 0;
 }
+
+.settings-card {
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.switch-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.switch-row input {
+  width: 18px;
+  height: 18px;
+}
+
+.request-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}

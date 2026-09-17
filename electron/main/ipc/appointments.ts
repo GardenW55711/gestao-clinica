@@ -67,6 +67,71 @@ function findConflict(params: {
   return null
 }
 
+/**
+ * Cria um agendamento de verdade (com checagem de conflito). Usada tanto
+ * pelo handler de IPC normal quanto pela aprovação de pedidos vindos do
+ * autoagendamento online — mesma regra de negócio nos dois casos.
+ */
+export function createAppointment(
+  clinicId: string,
+  input: AppointmentInput & { source?: 'staff' | 'patient_self' }
+): Appointment {
+  const db = getDb()
+
+  const procedureType = db.select().from(procedureTypes).where(eq(procedureTypes.id, input.procedureTypeId)).get()
+  if (!procedureType) throw new Error('Tipo de procedimento não encontrado')
+
+  if (procedureType.requiresRoom && !input.roomId) {
+    throw new Error('Este procedimento exige escolher uma sala')
+  }
+
+  const startAt = new Date(input.startAt)
+  const endAt = new Date(startAt.getTime() + procedureType.durationMinutes * 60_000)
+
+  const conflict = findConflict({
+    professionalId: input.professionalId,
+    roomId: input.roomId,
+    startAt: startAt.toISOString(),
+    endAt: endAt.toISOString()
+  })
+  if (conflict) throw new Error(conflict)
+
+  const id = randomUUID()
+  const timestamp = nowIso()
+
+  db.insert(appointments)
+    .values({
+      id,
+      clinicId,
+      patientId: input.patientId,
+      professionalId: input.professionalId,
+      roomId: input.roomId ?? null,
+      procedureTypeId: input.procedureTypeId,
+      startAt: startAt.toISOString(),
+      endAt: endAt.toISOString(),
+      status: 'scheduled',
+      source: input.source ?? 'staff',
+      notes: input.notes ?? null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      syncStatus: 'pending',
+      deletedAt: null
+    })
+    .run()
+
+  const row = db
+    .select()
+    .from(appointments)
+    .leftJoin(patients, eq(appointments.patientId, patients.id))
+    .leftJoin(professionals, eq(appointments.professionalId, professionals.id))
+    .leftJoin(rooms, eq(appointments.roomId, rooms.id))
+    .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
+    .where(eq(appointments.id, id))
+    .get()!
+
+  return toAppointmentDto(row)
+}
+
 function toAppointmentDto(row: {
   appointments: typeof appointments.$inferSelect
   patients: typeof patients.$inferSelect | null
@@ -114,64 +179,7 @@ export function registerAppointmentHandlers(): void {
   ipcMain.handle('appointments:create', (_e, input: AppointmentInput): ApiResult<Appointment> => {
     try {
       const clinicId = requireClinicId()
-      const db = getDb()
-
-      const procedureType = db
-        .select()
-        .from(procedureTypes)
-        .where(eq(procedureTypes.id, input.procedureTypeId))
-        .get()
-      if (!procedureType) throw new Error('Tipo de procedimento não encontrado')
-
-      if (procedureType.requiresRoom && !input.roomId) {
-        throw new Error('Este procedimento exige escolher uma sala')
-      }
-
-      const startAt = new Date(input.startAt)
-      const endAt = new Date(startAt.getTime() + procedureType.durationMinutes * 60_000)
-
-      const conflict = findConflict({
-        professionalId: input.professionalId,
-        roomId: input.roomId,
-        startAt: startAt.toISOString(),
-        endAt: endAt.toISOString()
-      })
-      if (conflict) throw new Error(conflict)
-
-      const id = randomUUID()
-      const timestamp = nowIso()
-
-      db.insert(appointments)
-        .values({
-          id,
-          clinicId,
-          patientId: input.patientId,
-          professionalId: input.professionalId,
-          roomId: input.roomId ?? null,
-          procedureTypeId: input.procedureTypeId,
-          startAt: startAt.toISOString(),
-          endAt: endAt.toISOString(),
-          status: 'scheduled',
-          source: 'staff',
-          notes: input.notes ?? null,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          syncStatus: 'pending',
-          deletedAt: null
-        })
-        .run()
-
-      const row = db
-        .select()
-        .from(appointments)
-        .leftJoin(patients, eq(appointments.patientId, patients.id))
-        .leftJoin(professionals, eq(appointments.professionalId, professionals.id))
-        .leftJoin(rooms, eq(appointments.roomId, rooms.id))
-        .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
-        .where(eq(appointments.id, id))
-        .get()!
-
-      return { ok: true, data: toAppointmentDto(row) }
+      return { ok: true, data: createAppointment(clinicId, input) }
     } catch (error) {
       return { ok: false, error: (error as Error).message }
     }

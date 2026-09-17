@@ -23,7 +23,9 @@ import type {
   InventoryExitInput,
   InventoryBatchAlert,
   Sale,
-  SaleInput
+  SaleInput,
+  ClinicSettings,
+  BookingRequestSummary
 } from '@shared/types'
 
 interface CrudApi<Dto, Input> {
@@ -63,6 +65,16 @@ declare global {
       sales: {
         list: () => Promise<ApiResult<Sale[]>>
         create: (input: SaleInput) => Promise<ApiResult<null>>
+      }
+      clinicSettings: {
+        get: () => Promise<ApiResult<ClinicSettings>>
+        setSelfBooking: (enabled: boolean) => Promise<ApiResult<null>>
+      }
+      procedureTypeBookable: (id: string, enabled: boolean) => Promise<ApiResult<null>>
+      bookingRequests: {
+        listPending: () => Promise<ApiResult<BookingRequestSummary[]>>
+        approve: (id: string) => Promise<ApiResult<null>>
+        reject: (id: string) => Promise<ApiResult<null>>
       }
     }
   }

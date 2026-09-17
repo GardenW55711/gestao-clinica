@@ -98,8 +98,13 @@ export function openClinicDatabase(masterPassword: string): void {
     throw new Error('Senha mestra incorreta')
   }
 
+  const db = drizzle(raw, { schema })
+  // Aplica migrações novas (ex: colunas adicionadas em fases mais recentes)
+  // em bancos de clínicas que já existiam antes dessas mudanças.
+  migrate(db, { migrationsFolder: migrationsFolder() })
+
   currentRaw = raw
-  currentDb = drizzle(raw, { schema })
+  currentDb = db
 }
 
 export function closeClinicDatabase(): void {
