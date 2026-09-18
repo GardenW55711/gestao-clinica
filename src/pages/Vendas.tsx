@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useFeedback } from '../components/Feedback'
 import { formatCurrency } from '../utils/masks'
 import type {
   FinancialSummary,
@@ -40,6 +41,7 @@ function getRange(preset: PeriodPreset): { from: string; to: string } {
 }
 
 export function Vendas(): JSX.Element {
+  const { toast } = useFeedback()
   const [patients, setPatients] = useState<Patient[]>([])
   const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([])
   const [inventoryItems, setInventoryItems] = useState<InventoryItemSummary[]>([])
@@ -150,6 +152,7 @@ export function Vendas(): JSX.Element {
     }
     setItems([])
     setPatientId('')
+    toast.success('Venda registrada')
     loadAll()
     loadSummary()
   }

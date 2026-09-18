@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupUpdater } from './updater'
@@ -13,6 +13,12 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    minWidth: 820,
+    minHeight: 560,
+    title: 'Gestão de Clínica',
+    // Cor de fundo igual à do tema, pra não piscar branco enquanto a tela carrega.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0c2f33' : '#eaf8ef',
+    ...(is.dev ? { icon: join(__dirname, '../../build/icon.png') } : {}),
     show: false,
     autoHideMenuBar: true,
     webPreferences: {

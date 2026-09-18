@@ -8,6 +8,7 @@ export function ProcedureTypes(): JSX.Element {
   return (
     <CrudPage<ProcedureType, ProcedureTypeInput>
       title="Tipos de procedimento"
+      itemName="procedimento"
       description="A duração aqui é usada para bloquear o horário automaticamente na agenda."
       api={window.api.procedureTypes}
       emptyInput={emptyInput}

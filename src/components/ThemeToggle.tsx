@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { Icon } from './Icons'
 
 type ThemeMode = 'auto' | 'light' | 'dark'
 
 const STORAGE_KEY = 'theme-mode'
 const NEXT: Record<ThemeMode, ThemeMode> = { auto: 'light', light: 'dark', dark: 'auto' }
 const LABEL: Record<ThemeMode, string> = { auto: 'Automático', light: 'Claro', dark: 'Escuro' }
+const ICON = { auto: 'auto', light: 'sun', dark: 'moon' } as const
 
 function readMode(): ThemeMode {
   try {
@@ -32,7 +34,10 @@ export function ThemeToggle({ floating = false }: { floating?: boolean }): JSX.E
   function handleClick(): void {
     const next = NEXT[mode]
     setMode(next)
+    // Troca suave: a página inteira faz um fade curto entre os dois visuais.
+    document.documentElement.classList.add('theme-fade')
     applyTheme(next)
+    window.setTimeout(() => document.documentElement.classList.remove('theme-fade'), 400)
     try {
       localStorage.setItem(STORAGE_KEY, next)
     } catch {
@@ -41,8 +46,14 @@ export function ThemeToggle({ floating = false }: { floating?: boolean }): JSX.E
   }
 
   return (
-    <button type="button" className={floating ? 'theme-toggle floating' : 'theme-toggle'} onClick={handleClick}>
-      Tema: {LABEL[mode]}
+    <button
+      type="button"
+      className={floating ? 'theme-toggle floating' : 'theme-toggle'}
+      onClick={handleClick}
+      title={`Tema: ${LABEL[mode]} (clique para alternar)`}
+    >
+      <Icon name={ICON[mode]} size={16} />
+      <span className="nav-label">Tema: {LABEL[mode]}</span>
     </button>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useEscapeKey } from '../utils/useEscapeKey'
 import type { InventoryItemSummary, StockUsageItem } from '@shared/types'
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export function CompleteAppointmentModal({ onCancel, onConfirm }: Props): JSX.Element {
+  useEscapeKey(onCancel)
   const [items, setItems] = useState<InventoryItemSummary[]>([])
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -33,7 +35,7 @@ export function CompleteAppointmentModal({ onCancel, onConfirm }: Props): JSX.El
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
-      <div className="card modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="card modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <h2>Finalizar atendimento</h2>
         <p className="subtitle">Se algum material foi usado, informe a quantidade (opcional — pode deixar em branco).</p>
 

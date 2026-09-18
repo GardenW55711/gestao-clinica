@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react'
+import { useEscapeKey } from '../utils/useEscapeKey'
 import type { AppointmentInput, Patient, Professional, ProcedureType, Room } from '@shared/types'
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function NewAppointmentForm(props: Props): JSX.Element {
+  useEscapeKey(props.onCancel)
   const [patientId, setPatientId] = useState('')
   const [professionalId, setProfessionalId] = useState(props.professionalId)
   const [procedureTypeId, setProcedureTypeId] = useState('')
@@ -42,12 +44,12 @@ export function NewAppointmentForm(props: Props): JSX.Element {
 
   return (
     <div className="modal-overlay" onClick={props.onCancel}>
-      <form className="card modal-card" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <form className="card modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>Novo agendamento</h2>
 
         <label>
           Paciente
-          <select value={patientId} onChange={(e) => setPatientId(e.target.value)} required>
+          <select autoFocus value={patientId} onChange={(e) => setPatientId(e.target.value)} required>
             <option value="" disabled>
               Selecione...
             </option>

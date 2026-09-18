@@ -37,7 +37,7 @@ function App(): JSX.Element {
     return (
       <div className="centered-page">
         <ThemeToggle floating />
-        <p>Carregando...</p>
+        <div className="spinner" aria-label="Carregando" />
       </div>
     )
   }

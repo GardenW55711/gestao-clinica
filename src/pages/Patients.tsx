@@ -15,6 +15,7 @@ export function Patients(): JSX.Element {
   return (
     <CrudPage<Patient, PatientInput>
       title="Pacientes"
+      itemName="paciente"
       description="O aceite de uso de dados (LGPD) é obrigatório para cadastrar um paciente."
       api={window.api.patients}
       emptyInput={emptyInput}

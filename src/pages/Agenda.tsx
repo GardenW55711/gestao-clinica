@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useFeedback } from '../components/Feedback'
 import { NewAppointmentForm } from '../components/NewAppointmentForm'
 import { CompleteAppointmentModal } from '../components/CompleteAppointmentModal'
 import type {
@@ -42,7 +43,17 @@ const STATUS_LABELS: Record<AppointmentStatus, string> = {
 
 type GridCell = { kind: 'start' | 'covered'; appt?: Appointment }
 
+function isCurrentSlot(date: string, slot: string): boolean {
+  const now = new Date()
+  if (date !== toDateInputValue(now)) return false
+  const [h, m] = slot.split(':').map(Number)
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  return nowMin >= h * 60 + m && nowMin < h * 60 + m + SLOT_MINUTES
+}
+
 export function Agenda(): JSX.Element {
+  const { toast } = useFeedback()
+  const nowRef = useRef<HTMLTableCellElement>(null)
   const [date, setDate] = useState(() => toDateInputValue(new Date()))
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [professionals, setProfessionals] = useState<Professional[]>([])
@@ -62,6 +73,11 @@ export function Agenda(): JSX.Element {
     loadAppointments()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date])
+
+  // Ao abrir o dia de hoje, rola até o horário atual (como o Calendário do iPhone).
+  useEffect(() => {
+    nowRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [date, professionals.length])
 
   useEffect(() => {
     window.api.professionals.list().then((r) => r.ok && r.data && setProfessionals(r.data.filter((p) => p.active)))
@@ -101,6 +117,7 @@ export function Agenda(): JSX.Element {
     }
     setFormError(null)
     setFormSlot(null)
+    toast.success('Agendamento criado')
     loadAppointments()
   }
 
@@ -118,6 +135,7 @@ export function Agenda(): JSX.Element {
     const result = await window.api.appointments.complete(completingId, usedItems)
     if (!result.ok) throw new Error(result.error ?? 'Não foi possível finalizar')
     setCompletingId(null)
+    toast.success('Atendimento finalizado')
     loadAppointments()
   }
 
@@ -143,7 +161,7 @@ export function Agenda(): JSX.Element {
           <tbody>
             {SLOTS.map((slot) => (
               <tr key={slot}>
-                <td className="agenda-time">{slot}</td>
+                <td className={isCurrentSlot(date, slot) ? 'agenda-time now' : 'agenda-time'} ref={isCurrentSlot(date, slot) ? nowRef : undefined}>{slot}</td>
                 {professionals.map((prof) => {
                   const cell = grid.get(prof.id)?.get(slot)
                   if (cell?.kind === 'covered') return null

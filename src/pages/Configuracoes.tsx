@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useFeedback } from '../components/Feedback'
 import type { BookingRequestSummary, ClinicSettings, ProcedureType } from '@shared/types'
 
 const PUBLIC_BOOKING_BASE_URL = 'https://web-booking-omega.vercel.app/'
 
 export function Configuracoes(): JSX.Element {
+  const { toast, confirm } = useFeedback()
   const [settings, setSettings] = useState<ClinicSettings | null>(null)
   const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([])
   const [requests, setRequests] = useState<BookingRequestSummary[]>([])
@@ -29,6 +31,7 @@ export function Configuracoes(): JSX.Element {
     setBusy(true)
     await window.api.clinicSettings.setSelfBooking(!settings.selfBookingEnabled)
     setBusy(false)
+    toast.success(settings.selfBookingEnabled ? 'Autoagendamento desligado' : 'Autoagendamento ligado')
     loadAll()
   }
 
@@ -40,18 +43,29 @@ export function Configuracoes(): JSX.Element {
   async function handleApprove(id: string): Promise<void> {
     const result = await window.api.bookingRequests.approve(id)
     if (!result.ok) {
-      alert(result.error ?? 'Não foi possível aprovar')
+      toast.error(result.error ?? 'Não foi possível aprovar')
       return
     }
+    toast.success('Pedido aprovado — agendamento criado')
     loadAll()
   }
 
   async function handleReject(id: string): Promise<void> {
+    const ok = await confirm({ title: 'Recusar este pedido?', message: 'O paciente não será avisado automaticamente.', confirmLabel: 'Recusar', danger: true })
+    if (!ok) return
     await window.api.bookingRequests.reject(id)
+    toast.info('Pedido recusado')
     loadAll()
   }
 
-  if (!settings) return <p>Carregando...</p>
+  if (!settings) {
+    return (
+      <div>
+        <div className="skeleton title" />
+        <div className="skeleton block" />
+      </div>
+    )
+  }
 
   return (
     <div>

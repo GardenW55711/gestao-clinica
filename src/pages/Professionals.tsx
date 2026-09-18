@@ -7,6 +7,7 @@ export function Professionals(): JSX.Element {
   return (
     <CrudPage<Professional, ProfessionalInput>
       title="Profissionais"
+      itemName="profissional"
       api={window.api.professionals}
       emptyInput={emptyInput}
       fields={[

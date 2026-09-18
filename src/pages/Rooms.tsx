@@ -7,6 +7,7 @@ export function Rooms(): JSX.Element {
   return (
     <CrudPage<Room, RoomInput>
       title="Salas"
+      itemName="sala"
       api={window.api.rooms}
       emptyInput={emptyInput}
       fields={[

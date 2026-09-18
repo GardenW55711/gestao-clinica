@@ -1,9 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react'
+import { useFeedback } from '../components/Feedback'
 import type { InventoryBatchAlert, InventoryItemInput, InventoryItemSummary } from '@shared/types'
 
 const emptyItemInput: InventoryItemInput = { name: '', category: '', unit: 'unidade', minQuantity: 0, unitCost: 0 }
 
 export function Estoque(): JSX.Element {
+  const { toast } = useFeedback()
   const [items, setItems] = useState<InventoryItemSummary[]>([])
   const [alerts, setAlerts] = useState<InventoryBatchAlert[]>([])
   const [itemForm, setItemForm] = useState<InventoryItemInput>(emptyItemInput)
@@ -40,6 +42,7 @@ export function Estoque(): JSX.Element {
       return
     }
     setItemForm(emptyItemInput)
+    toast.success('Item cadastrado')
     loadItems()
   }
 
@@ -58,6 +61,7 @@ export function Estoque(): JSX.Element {
     }
     setMoveQuantity('')
     setMoveExpiry('')
+    toast.success('Entrada registrada')
     loadItems()
     loadAlerts()
   }
@@ -77,6 +81,7 @@ export function Estoque(): JSX.Element {
     }
     setMoveQuantity('')
     setMoveReason('')
+    toast.success('Saída registrada')
     loadItems()
     loadAlerts()
   }
