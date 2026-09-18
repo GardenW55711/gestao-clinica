@@ -57,6 +57,14 @@ export const procedureTypes = sqliteTable('procedure_types', {
   active: integer('active', { mode: 'boolean' }).notNull().default(true)
 })
 
+// Produtos que cada tipo de procedimento consome, com a quantidade padrão.
+export const procedureTypeItems = sqliteTable('procedure_type_items', {
+  ...tenantColumns,
+  procedureTypeId: text('procedure_type_id').notNull(),
+  inventoryItemId: text('inventory_item_id').notNull(),
+  defaultQuantity: real('default_quantity').notNull().default(1)
+})
+
 export const patients = sqliteTable('patients', {
   ...tenantColumns,
   name: text('name').notNull(),

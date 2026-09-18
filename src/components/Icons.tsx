@@ -59,6 +59,19 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   users: <path d="M12 5v14M5 12h14" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M16 16l4.5 4.5" />
+    </>
+  ),
+  plus: <path d="M12 5v14M5 12h14" />,
+  close: <path d="M6 6l12 12M18 6L6 18" />,
+  edit: <path d="M4 20h4.5L19.5 9a2.1 2.1 0 0 0-3-3L5.5 17 4 20z" />,
+  trash: <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />,
+  chevronLeft: <path d="M15 5l-7 7 7 7" />,
+  chevronRight: <path d="M9 5l7 7-7 7" />,
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   empty: (
     <>
       <rect x="4" y="5" width="16" height="14" rx="3" />

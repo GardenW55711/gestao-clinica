@@ -85,6 +85,13 @@ export interface RoomInput {
   description?: string
 }
 
+export interface ProcedureItemUsage {
+  inventoryItemId: string
+  itemName: string
+  unit: string
+  defaultQuantity: number
+}
+
 export interface ProcedureType {
   id: string
   name: string
@@ -93,6 +100,7 @@ export interface ProcedureType {
   requiresRoom: boolean
   bookableOnline: boolean
   active: boolean
+  items: ProcedureItemUsage[]
 }
 
 export interface ProcedureTypeInput {
@@ -100,6 +108,7 @@ export interface ProcedureTypeInput {
   durationMinutes: number
   defaultPrice: number
   requiresRoom: boolean
+  items: { inventoryItemId: string; defaultQuantity: number }[]
 }
 
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
@@ -201,8 +210,15 @@ export interface SaleItem {
   subtotal: number
 }
 
+export interface FinancialSeriesPoint {
+  key: string
+  total: number
+  count: number
+}
+
 export interface FinancialSummary {
   totalAmount: number
+  salesCount: number
   byPaymentMethod: { paymentMethod: PaymentMethod; total: number }[]
   byProcedureType: { name: string; total: number }[]
 }

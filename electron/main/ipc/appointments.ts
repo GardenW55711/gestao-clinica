@@ -177,6 +177,30 @@ export function registerAppointmentHandlers(): void {
     }
   })
 
+  // Vários dias de uma vez (usado pelas visões de semana e mês da agenda).
+  ipcMain.handle(
+    'appointments:listRange',
+    (_e, params: { from: string; to: string }): ApiResult<Appointment[]> => {
+      try {
+        const db = getDb()
+        const start = dayRange(params.from).start
+        const end = dayRange(params.to).end
+        const rows = db
+          .select()
+          .from(appointments)
+          .leftJoin(patients, eq(appointments.patientId, patients.id))
+          .leftJoin(professionals, eq(appointments.professionalId, professionals.id))
+          .leftJoin(rooms, eq(appointments.roomId, rooms.id))
+          .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
+          .where(and(gte(appointments.startAt, start), lt(appointments.startAt, end), isNull(appointments.deletedAt)))
+          .all()
+        return { ok: true, data: rows.map(toAppointmentDto) }
+      } catch (error) {
+        return { ok: false, error: (error as Error).message }
+      }
+    }
+  )
+
   ipcMain.handle('appointments:create', (_e, input: AppointmentInput): ApiResult<Appointment> => {
     try {
       const clinicId = requireClinicId()

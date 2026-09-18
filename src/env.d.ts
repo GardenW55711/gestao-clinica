@@ -27,6 +27,7 @@ import type {
   Sale,
   SaleInput,
   FinancialSummary,
+  FinancialSeriesPoint,
   ClinicSettings,
   BookingRequestSummary,
   StockUsageItem
@@ -63,6 +64,7 @@ declare global {
       procedureTypes: CrudApi<ProcedureType, ProcedureTypeInput>
       appointments: {
         listByDate: (dateIso: string) => Promise<ApiResult<Appointment[]>>
+        listRange: (from: string, to: string) => Promise<ApiResult<Appointment[]>>
         create: (input: AppointmentInput) => Promise<ApiResult<Appointment>>
         setStatus: (id: string, status: AppointmentStatus) => Promise<ApiResult<null>>
         complete: (id: string, usedItems: StockUsageItem[]) => Promise<ApiResult<null>>
@@ -79,6 +81,11 @@ declare global {
         list: () => Promise<ApiResult<Sale[]>>
         create: (input: SaleInput) => Promise<ApiResult<null>>
         financialSummary: (from: string, to: string) => Promise<ApiResult<FinancialSummary>>
+        financialSeries: (
+          from: string,
+          to: string,
+          granularity: 'day' | 'month'
+        ) => Promise<ApiResult<FinancialSeriesPoint[]>>
       }
       clinicSettings: {
         get: () => Promise<ApiResult<ClinicSettings>>

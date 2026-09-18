@@ -16,7 +16,8 @@ import {
   inventoryMovements,
   sales,
   saleItems,
-  bookingRequests
+  bookingRequests,
+  procedureTypeItems
 } from '../db/schema'
 
 /**
@@ -242,6 +243,23 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt
     }))
+
+    // Tabela nova: se a nuvem ainda não tem (schema.sql não foi rodado depois da
+    // atualização), não deixa isso travar o resto da sincronização.
+    try {
+      await pushPendingTable(supabase, procedureTypeItems, 'procedure_type_items', (row) => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        procedure_type_id: row.procedureTypeId,
+        inventory_item_id: row.inventoryItemId,
+        default_quantity: row.defaultQuantity,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      }))
+    } catch (error) {
+      console.warn('[sync] produtos do procedimento ainda não sincronizados:', (error as Error).message)
+    }
 
     await pullNewBookingRequests(supabase, clinicId)
 

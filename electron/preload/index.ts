@@ -26,6 +26,7 @@ import type {
   Sale,
   SaleInput,
   FinancialSummary,
+  FinancialSeriesPoint,
   ClinicSettings,
   BookingRequestSummary,
   StockUsageItem
@@ -75,6 +76,8 @@ const api = {
   appointments: {
     listByDate: (dateIso: string): Promise<ApiResult<Appointment[]>> =>
       ipcRenderer.invoke('appointments:listByDate', dateIso),
+    listRange: (from: string, to: string): Promise<ApiResult<Appointment[]>> =>
+      ipcRenderer.invoke('appointments:listRange', { from, to }),
     create: (input: AppointmentInput): Promise<ApiResult<Appointment>> =>
       ipcRenderer.invoke('appointments:create', input),
     setStatus: (id: string, status: AppointmentStatus): Promise<ApiResult<null>> =>
@@ -97,7 +100,9 @@ const api = {
     list: (): Promise<ApiResult<Sale[]>> => ipcRenderer.invoke('sales:list'),
     create: (input: SaleInput): Promise<ApiResult<null>> => ipcRenderer.invoke('sales:create', input),
     financialSummary: (from: string, to: string): Promise<ApiResult<FinancialSummary>> =>
-      ipcRenderer.invoke('sales:financialSummary', { from, to })
+      ipcRenderer.invoke('sales:financialSummary', { from, to }),
+    financialSeries: (from: string, to: string, granularity: 'day' | 'month'): Promise<ApiResult<FinancialSeriesPoint[]>> =>
+      ipcRenderer.invoke('sales:financialSeries', { from, to, granularity })
   },
   clinicSettings: {
     get: (): Promise<ApiResult<ClinicSettings>> => ipcRenderer.invoke('clinic:getSettings'),

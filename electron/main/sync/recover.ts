@@ -15,7 +15,8 @@ import {
   inventoryMovements,
   sales,
   saleItems,
-  bookingRequests
+  bookingRequests,
+  procedureTypeItems
 } from '../db/schema'
 
 /**
@@ -265,6 +266,24 @@ export async function recoverClinicFromCloud(params: {
       syncStatus: 'synced',
       deletedAt: r.deleted_at
     }))
+
+    // Produtos de cada procedimento (tabela mais nova: se a nuvem ainda não a
+    // tem, a recuperação segue sem ela).
+    try {
+      await pullAllRows(supabase, cloudClinic.id, procedureTypeItems, 'procedure_type_items', (r) => ({
+        id: r.id,
+        clinicId: r.clinic_id,
+        procedureTypeId: r.procedure_type_id,
+        inventoryItemId: r.inventory_item_id,
+        defaultQuantity: r.default_quantity,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        syncStatus: 'synced',
+        deletedAt: r.deleted_at
+      }))
+    } catch (error) {
+      console.warn('[recover] produtos do procedimento não recuperados:', (error as Error).message)
+    }
 
     return { clinicId: cloudClinic.id }
   } catch (error) {

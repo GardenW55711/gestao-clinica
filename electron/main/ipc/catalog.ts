@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { eq, isNull } from 'drizzle-orm'
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { getDb } from '../db/client'
-import { patients, professionals, rooms, procedureTypes } from '../db/schema'
+import { patients, professionals, rooms } from '../db/schema'
 import { getCurrentClinicId } from '../session'
 import type {
   ApiResult,
@@ -12,9 +12,7 @@ import type {
   Professional,
   ProfessionalInput,
   Room,
-  RoomInput,
-  ProcedureType,
-  ProcedureTypeInput
+  RoomInput
 } from '@shared/types'
 
 function nowIso(): string {
@@ -193,39 +191,5 @@ export function registerCatalogHandlers(): void {
     })
   })
 
-  registerCrud<typeof procedureTypes.$inferSelect, ProcedureType, ProcedureTypeInput>({
-    prefix: 'procedureTypes',
-    table: procedureTypes,
-    toDto: (row) => ({
-      id: row.id,
-      name: row.name,
-      durationMinutes: row.durationMinutes,
-      defaultPrice: row.defaultPrice,
-      requiresRoom: row.requiresRoom,
-      bookableOnline: row.bookableOnline,
-      active: row.active
-    }),
-    toInsertValues: (id, clinicId, timestamp, input) => ({
-      id,
-      clinicId,
-      name: input.name,
-      durationMinutes: input.durationMinutes,
-      defaultPrice: input.defaultPrice,
-      requiresRoom: input.requiresRoom,
-      bookableOnline: false,
-      active: true,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      syncStatus: 'pending',
-      deletedAt: null
-    }),
-    toUpdateValues: (timestamp, input) => ({
-      name: input.name,
-      durationMinutes: input.durationMinutes,
-      defaultPrice: input.defaultPrice,
-      requiresRoom: input.requiresRoom,
-      updatedAt: timestamp,
-      syncStatus: 'pending'
-    })
-  })
+
 }

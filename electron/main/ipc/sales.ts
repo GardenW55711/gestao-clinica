@@ -5,7 +5,16 @@ import { getDb } from '../db/client'
 import { sales, saleItems, patients } from '../db/schema'
 import { getCurrentClinicId, getCurrentStaffMemberId } from '../session'
 import { consumeInventoryFefo } from '../inventory/fefo'
-import type { ApiResult, FinancialSummary, PaymentMethod, Sale, SaleInput } from '@shared/types'
+import type { ApiResult, FinancialSeriesPoint, FinancialSummary, PaymentMethod, Sale, SaleInput } from '@shared/types'
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function bucketKey(d: Date, granularity: 'day' | 'month'): string {
+  const month = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+  return granularity === 'day' ? `${month}-${pad(d.getDate())}` : month
+}
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -170,6 +179,7 @@ export function registerSalesHandlers(): void {
           ok: true,
           data: {
             totalAmount,
+            salesCount: salesInRange.length,
             byPaymentMethod: [...byPaymentMethodMap.entries()].map(([paymentMethod, total]) => ({
               paymentMethod,
               total
@@ -179,6 +189,51 @@ export function registerSalesHandlers(): void {
               .sort((a, b) => b.total - a.total)
           }
         }
+      } catch (error) {
+        return { ok: false, error: (error as Error).message }
+      }
+    }
+  )
+
+  // Série para o gráfico de vendas: um ponto por dia (ou por mês), incluindo os
+  // períodos sem venda (valor zero), agrupados pelo fuso horário do computador.
+  ipcMain.handle(
+    'sales:financialSeries',
+    (_e, params: { from: string; to: string; granularity: 'day' | 'month' }): ApiResult<FinancialSeriesPoint[]> => {
+      try {
+        const db = getDb()
+        const salesInRange = db
+          .select()
+          .from(sales)
+          .where(and(gte(sales.createdAt, params.from), lt(sales.createdAt, params.to), isNull(sales.deletedAt)))
+          .all()
+
+        const buckets = new Map<string, FinancialSeriesPoint>()
+        const start = new Date(params.from)
+        const end = new Date(params.to)
+        const cursor =
+          params.granularity === 'day'
+            ? new Date(start.getFullYear(), start.getMonth(), start.getDate())
+            : new Date(start.getFullYear(), start.getMonth(), 1)
+
+        let guard = 0
+        while (cursor <= end && guard++ < 1500) {
+          const key = bucketKey(cursor, params.granularity)
+          buckets.set(key, { key, total: 0, count: 0 })
+          if (params.granularity === 'day') cursor.setDate(cursor.getDate() + 1)
+          else cursor.setMonth(cursor.getMonth() + 1)
+        }
+
+        for (const sale of salesInRange) {
+          const key = bucketKey(new Date(sale.createdAt), params.granularity)
+          const point = buckets.get(key) ?? { key, total: 0, count: 0 }
+          point.total += sale.totalAmount
+          point.count += 1
+          buckets.set(key, point)
+        }
+
+        const points = [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key))
+        return { ok: true, data: points }
       } catch (error) {
         return { ok: false, error: (error as Error).message }
       }

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useFeedback } from '../components/Feedback'
+import { RankingBars, SeriesChart } from '../components/Charts'
 import { formatCurrency } from '../utils/masks'
 import type {
+  FinancialSeriesPoint,
   FinancialSummary,
   InventoryItemSummary,
   Patient,
@@ -18,26 +20,30 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   outro: 'Outro'
 }
 
-type PeriodPreset = 'today' | '7d' | 'month'
+type PeriodMode = 'today' | '7d' | 'month' | 'custom'
+type Granularity = 'day' | 'month'
 
-const PERIOD_LABELS: Record<PeriodPreset, string> = {
+const PERIOD_LABELS: Record<Exclude<PeriodMode, 'custom'>, string> = {
   today: 'Hoje',
   '7d': 'Últimos 7 dias',
   month: 'Este mês'
 }
 
-function getRange(preset: PeriodPreset): { from: string; to: string } {
+function presetRange(preset: Exclude<PeriodMode, 'custom'>): { from: Date; to: Date } {
   const now = new Date()
   const to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-  let from: Date
-  if (preset === 'today') {
-    from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
-  } else if (preset === '7d') {
-    from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0)
-  } else {
-    from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
-  }
-  return { from: from.toISOString(), to: to.toISOString() }
+  const from =
+    preset === 'today'
+      ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      : preset === '7d'
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
+        : new Date(now.getFullYear(), now.getMonth(), 1)
+  return { from, to }
+}
+
+function parseInputDate(value: string, endOfDay: boolean): Date {
+  const [y, m, d] = value.split('-').map(Number)
+  return endOfDay ? new Date(y, m - 1, d, 23, 59, 59, 999) : new Date(y, m - 1, d)
 }
 
 export function Vendas(): JSX.Element {
@@ -47,8 +53,12 @@ export function Vendas(): JSX.Element {
   const [inventoryItems, setInventoryItems] = useState<InventoryItemSummary[]>([])
   const [sales, setSales] = useState<Sale[]>([])
 
-  const [period, setPeriod] = useState<PeriodPreset>('month')
+  const [mode, setMode] = useState<PeriodMode>('month')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
+  const [granularity, setGranularity] = useState<Granularity>('day')
   const [summary, setSummary] = useState<FinancialSummary | null>(null)
+  const [series, setSeries] = useState<FinancialSeriesPoint[]>([])
 
   const [patientId, setPatientId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro')
@@ -61,6 +71,17 @@ export function Vendas(): JSX.Element {
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const customInvalid = mode === 'custom' && customFrom !== '' && customTo !== '' && customFrom > customTo
+  const customIncomplete = mode === 'custom' && (customFrom === '' || customTo === '')
+
+  const range = useMemo(() => {
+    if (mode !== 'custom') return presetRange(mode)
+    if (customFrom === '' || customTo === '' || customFrom > customTo) return null
+    return { from: parseInputDate(customFrom, false), to: parseInputDate(customTo, true) }
+  }, [mode, customFrom, customTo])
+
+  const rangeKey = range ? `${range.from.toISOString()}|${range.to.toISOString()}` : null
 
   async function loadAll(): Promise<void> {
     const [p, pt, inv, s] = await Promise.all([
@@ -75,10 +96,16 @@ export function Vendas(): JSX.Element {
     if (s.ok && s.data) setSales(s.data)
   }
 
-  async function loadSummary(): Promise<void> {
-    const { from, to } = getRange(period)
-    const result = await window.api.sales.financialSummary(from, to)
-    if (result.ok && result.data) setSummary(result.data)
+  async function loadFinancial(): Promise<void> {
+    if (!range) return
+    const from = range.from.toISOString()
+    const to = range.to.toISOString()
+    const [sum, ser] = await Promise.all([
+      window.api.sales.financialSummary(from, to),
+      window.api.sales.financialSeries(from, to, granularity)
+    ])
+    if (sum.ok && sum.data) setSummary(sum.data)
+    if (ser.ok && ser.data) setSeries(ser.data)
   }
 
   useEffect(() => {
@@ -86,9 +113,15 @@ export function Vendas(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    loadSummary()
+    loadFinancial()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period])
+  }, [rangeKey, granularity])
+
+  function choosePreset(preset: Exclude<PeriodMode, 'custom'>): void {
+    setMode(preset)
+    setCustomFrom('')
+    setCustomTo('')
+  }
 
   function handleSelectRef(id: string): void {
     setSelectedRefId(id)
@@ -154,72 +187,118 @@ export function Vendas(): JSX.Element {
     setPatientId('')
     toast.success('Venda registrada')
     loadAll()
-    loadSummary()
+    loadFinancial()
   }
+
+  const totalAmount = summary?.totalAmount ?? 0
+  const salesCount = summary?.salesCount ?? 0
+  const ticket = salesCount > 0 ? totalAmount / salesCount : 0
 
   return (
     <div>
       <h1>Financeiro</h1>
       <p className="subtitle">Controle de faturamento da clínica — cobranças por procedimento e produto.</p>
 
-      <div className="card financial-panel">
-        <div className="period-picker">
-          {(Object.keys(PERIOD_LABELS) as PeriodPreset[]).map((p) => (
+      <div className="filter-bar card">
+        <div className="period-picker" role="group" aria-label="Período">
+          {(Object.keys(PERIOD_LABELS) as Exclude<PeriodMode, 'custom'>[]).map((p) => (
             <button
               key={p}
               type="button"
-              className={p === period ? 'period-btn active' : 'period-btn'}
-              onClick={() => setPeriod(p)}
+              className={p === mode ? 'period-btn active' : 'period-btn'}
+              onClick={() => choosePreset(p)}
             >
               {PERIOD_LABELS[p]}
             </button>
           ))}
         </div>
 
-        <p className="sale-total">Faturamento no período: {formatCurrency(summary?.totalAmount ?? 0)}</p>
+        <div className={mode === 'custom' ? 'date-range active' : 'date-range'}>
+          <label>
+            De
+            <input
+              type="date"
+              value={customFrom}
+              max={customTo || undefined}
+              onChange={(e) => {
+                setCustomFrom(e.target.value)
+                setMode('custom')
+              }}
+            />
+          </label>
+          <label>
+            Até
+            <input
+              type="date"
+              value={customTo}
+              min={customFrom || undefined}
+              onChange={(e) => {
+                setCustomTo(e.target.value)
+                setMode('custom')
+              }}
+            />
+          </label>
+        </div>
 
-        <div className="financial-breakdown">
-          <div>
-            <h3>Por forma de pagamento</h3>
-            <table className="data-table">
-              <tbody>
-                {(summary?.byPaymentMethod ?? []).map((row) => (
-                  <tr key={row.paymentMethod}>
-                    <td>{PAYMENT_LABELS[row.paymentMethod]}</td>
-                    <td>{formatCurrency(row.total)}</td>
-                  </tr>
-                ))}
-                {(!summary || summary.byPaymentMethod.length === 0) && (
-                  <tr>
-                    <td colSpan={2} className="empty-row">
-                      Sem vendas no período.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        {customInvalid && <span className="error">A data inicial não pode ser depois da final.</span>}
+        {customIncomplete && !customInvalid && <span className="filter-hint">Informe as duas datas.</span>}
+      </div>
 
-          <div>
-            <h3>Por tipo de procedimento</h3>
-            <table className="data-table">
-              <tbody>
-                {(summary?.byProcedureType ?? []).map((row) => (
-                  <tr key={row.name}>
-                    <td>{row.name}</td>
-                    <td>{formatCurrency(row.total)}</td>
-                  </tr>
-                ))}
-                {(!summary || summary.byProcedureType.length === 0) && (
-                  <tr>
-                    <td colSpan={2} className="empty-row">
-                      Sem procedimentos cobrados no período.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      <div className="tiles kpis">
+        <div className="tile static">
+          <span className="tile-label">Faturamento</span>
+          <span className="tile-value">{formatCurrency(totalAmount)}</span>
+          <span className="tile-hint">no período selecionado</span>
+        </div>
+        <div className="tile static">
+          <span className="tile-label">Vendas</span>
+          <span className="tile-value">{salesCount}</span>
+          <span className="tile-hint">cobranças registradas</span>
+        </div>
+        <div className="tile static">
+          <span className="tile-label">Ticket médio</span>
+          <span className="tile-value">{formatCurrency(ticket)}</span>
+          <span className="tile-hint">por venda</span>
+        </div>
+      </div>
+
+      <div className="card chart-card">
+        <div className="chart-head">
+          <h3>Vendas por período</h3>
+          <div className="period-picker" role="group" aria-label="Agrupar por">
+            <button
+              type="button"
+              className={granularity === 'day' ? 'period-btn active' : 'period-btn'}
+              onClick={() => setGranularity('day')}
+            >
+              Dia
+            </button>
+            <button
+              type="button"
+              className={granularity === 'month' ? 'period-btn active' : 'period-btn'}
+              onClick={() => setGranularity('month')}
+            >
+              Mês
+            </button>
           </div>
+        </div>
+        <SeriesChart points={series} granularity={granularity} />
+      </div>
+
+      <div className="financial-breakdown">
+        <div className="card chart-card">
+          <h3>Vendas por procedimento</h3>
+          <RankingBars
+            rows={(summary?.byProcedureType ?? []).map((r) => ({ label: r.name, total: r.total }))}
+            emptyText="Sem procedimentos cobrados no período."
+          />
+        </div>
+        <div className="card chart-card">
+          <h3>Formas de pagamento</h3>
+          <RankingBars
+            rows={(summary?.byPaymentMethod ?? []).map((r) => ({ label: PAYMENT_LABELS[r.paymentMethod], total: r.total }))}
+            emptyText="Sem vendas no período."
+          />
         </div>
       </div>
 

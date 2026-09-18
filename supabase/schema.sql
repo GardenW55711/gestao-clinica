@@ -295,6 +295,27 @@ create policy "clinic manages its sale items"
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
   with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
 
+-- Produtos que cada tipo de procedimento consome (baixa automática de estoque) ---
+
+create table if not exists public.procedure_type_items (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  procedure_type_id uuid not null,
+  inventory_item_id uuid not null,
+  default_quantity numeric not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+alter table public.procedure_type_items enable row level security;
+
+drop policy if exists "clinic manages its procedure type items" on public.procedure_type_items;
+create policy "clinic manages its procedure type items"
+  on public.procedure_type_items for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
 -- Fase 6: autoagendamento online --------------------------------------------
 -- A página pública de agendamento não faz login (o paciente não tem conta).
 -- Ela usa o papel "anon" do Supabase, então aqui liberamos, só pra esse
