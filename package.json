@@ -12,12 +12,14 @@
     "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
     "build:win": "electron-vite build && electron-builder --win",
+    "release:win": "electron-vite build && electron-builder --win --publish always",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
     "bcryptjs": "^2.4.3",
+    "electron-updater": "^6.3.9",
     "better-sqlite3": "^11.5.0",
     "better-sqlite3-multiple-ciphers": "^11.6.0",
     "drizzle-orm": "^0.36.4",
@@ -44,5 +46,29 @@
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
     "vitest": "^2.1.5"
+  },
+  "build": {
+    "appId": "com.gestaoclinica.app",
+    "productName": "Gestão de Clínica",
+    "files": ["out/**/*"],
+    "asarUnpack": ["**/*.node"],
+    "extraResources": [
+      { "from": "drizzle", "to": "drizzle" },
+      { "from": ".env", "to": ".env" }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "GardenW55711",
+      "repo": "gestao-clinica",
+      "releaseType": "release"
+    }
   }
 }

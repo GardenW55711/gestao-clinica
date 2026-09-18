@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { app } from 'electron'
+import { resourcesPath } from './paths'
 
 function parseEnvFile(path: string): Record<string, string> {
   const result: Record<string, string> = {}
@@ -16,7 +16,7 @@ function parseEnvFile(path: string): Record<string, string> {
   return result
 }
 
-const parsed = parseEnvFile(join(app.getAppPath(), '.env'))
+const parsed = parseEnvFile(join(resourcesPath(), '.env'))
 
 export const SUPABASE_URL = parsed.SUPABASE_URL ?? ''
 export const SUPABASE_ANON_KEY = parsed.SUPABASE_ANON_KEY ?? ''

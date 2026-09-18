@@ -6,6 +6,7 @@ import { join } from 'path'
 import { scryptSync, randomBytes } from 'crypto'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import * as schema from './schema'
+import { resourcesPath } from '../config/paths'
 
 const KEY_LENGTH = 32 // 256 bits — tamanho de chave recomendado para os cifradores suportados
 
@@ -24,7 +25,7 @@ function dbPath(): string {
 }
 
 function migrationsFolder(): string {
-  return join(app.getAppPath(), 'drizzle')
+  return join(resourcesPath(), 'drizzle')
 }
 
 export function hasClinicSetup(): boolean {
