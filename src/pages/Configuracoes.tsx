@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { BookingRequestSummary, ClinicSettings, ProcedureType } from '@shared/types'
 
-const PUBLIC_BOOKING_BASE_URL = 'https://SEU-DOMINIO-AQUI/'
+const PUBLIC_BOOKING_BASE_URL = 'https://web-booking-omega.vercel.app/'
 
 export function Configuracoes(): JSX.Element {
   const [settings, setSettings] = useState<ClinicSettings | null>(null)
