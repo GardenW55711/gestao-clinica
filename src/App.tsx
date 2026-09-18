@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { SetupClinic } from './pages/SetupClinic'
 import { ClinicLogin } from './pages/ClinicLogin'
@@ -12,6 +12,7 @@ import { Rooms } from './pages/Rooms'
 import { ProcedureTypes } from './pages/ProcedureTypes'
 import { Estoque } from './pages/Estoque'
 import { Vendas } from './pages/Vendas'
+import { ThemeToggle } from './components/ThemeToggle'
 import { Configuracoes } from './pages/Configuracoes'
 import { ClinicContext } from './context/ClinicContext'
 import type { ClinicLoginResult, StaffSummary } from '@shared/types'
@@ -35,26 +36,40 @@ function App(): JSX.Element {
   if (stage.name === 'loading') {
     return (
       <div className="centered-page">
+        <ThemeToggle floating />
         <p>Carregando...</p>
       </div>
     )
   }
 
   if (stage.name === 'setup') {
-    return <SetupClinic onDone={(clinic) => setStage({ name: 'pick-staff', clinic })} />
+    return (
+      <>
+        <ThemeToggle floating />
+        <SetupClinic onDone={(clinic) => setStage({ name: 'pick-staff', clinic })} />
+      </>
+    )
   }
 
   if (stage.name === 'login') {
-    return <ClinicLogin onDone={(clinic) => setStage({ name: 'pick-staff', clinic })} />
+    return (
+      <>
+        <ThemeToggle floating />
+        <ClinicLogin onDone={(clinic) => setStage({ name: 'pick-staff', clinic })} />
+      </>
+    )
   }
 
   if (stage.name === 'pick-staff') {
     return (
+      <>
+        <ThemeToggle floating />
       <StaffPicker
         clinicName={stage.clinic.clinicName}
         staff={stage.clinic.staff}
         onDone={(staff) => setStage({ name: 'home', clinic: stage.clinic, staff })}
       />
+      </>
     )
   }
 
@@ -80,3 +95,4 @@ function App(): JSX.Element {
 }
 
 export default App
+
