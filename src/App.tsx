@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { SetupClinic } from './pages/SetupClinic'
 import { ClinicLogin } from './pages/ClinicLogin'
