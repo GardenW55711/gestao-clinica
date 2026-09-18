@@ -4,9 +4,11 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { app } from 'electron'
 import { join } from 'path'
 import { scryptSync, randomBytes } from 'crypto'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'fs'
 import * as schema from './schema'
 import { resourcesPath } from '../config/paths'
+
+const MAX_BACKUPS = 10
 
 const KEY_LENGTH = 32 // 256 bits — tamanho de chave recomendado para os cifradores suportados
 
@@ -26,6 +28,43 @@ function dbPath(): string {
 
 function migrationsFolder(): string {
   return join(resourcesPath(), 'drizzle')
+}
+
+function backupsFolder(): string {
+  return join(app.getPath('userData'), 'backups')
+}
+
+/**
+ * Guarda uma cópia do banco (ainda criptografado) antes de qualquer operação
+ * arriscada, tipo aplicar migrações numa atualização de versão. Mantém só as
+ * últimas cópias pra não acumular espaço em disco. Isso é uma rede de
+ * segurança local — o backup de verdade continua sendo a nuvem.
+ */
+function backupDatabaseFile(): void {
+  if (!existsSync(dbPath())) return
+  const dir = backupsFolder()
+  mkdirSync(dir, { recursive: true })
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  try {
+    copyFileSync(dbPath(), join(dir, `clinic-${stamp}.db`))
+  } catch (err) {
+    console.error('[backup] falha ao copiar banco local:', err)
+    return
+  }
+
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith('.db'))
+    .map((f) => ({ name: f, mtime: statSync(join(dir, f)).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime)
+
+  for (const old of files.slice(MAX_BACKUPS)) {
+    try {
+      unlinkSync(join(dir, old.name))
+    } catch {
+      // não é crítico se uma cópia antiga não puder ser apagada agora
+    }
+  }
 }
 
 export function hasClinicSetup(): boolean {
@@ -99,12 +138,19 @@ export function openClinicDatabase(masterPassword: string): void {
     throw new Error('Senha mestra incorreta')
   }
 
-  const db = drizzle(raw, { schema })
+  // Faz uma cópia de segurança antes de mexer no banco (migrações rodam a
+  // seguir). Se algo der errado, a cópia mais recente fica em "backups/".
+  raw.close()
+  backupDatabaseFile()
+  const rawAfterBackup = new Database(dbPath())
+  rawAfterBackup.key(key)
+
+  const db = drizzle(rawAfterBackup, { schema })
   // Aplica migrações novas (ex: colunas adicionadas em fases mais recentes)
   // em bancos de clínicas que já existiam antes dessas mudanças.
   migrate(db, { migrationsFolder: migrationsFolder() })
 
-  currentRaw = raw
+  currentRaw = rawAfterBackup
   currentDb = db
 }
 

@@ -13,8 +13,9 @@ import {
 import { clinics, staffMembers, auditLog } from '../db/schema'
 import { signInClinic, signUpClinic } from '../supabase/client'
 import { syncClinicAndStaff } from '../sync/engine'
+import { recoverClinicFromCloud } from '../sync/recover'
 import { setCurrentSession, getCurrentClinicId, setCurrentStaffMember } from '../session'
-import type { ApiResult, ClinicLoginResult, ClinicSetupInput, StaffSummary } from '@shared/types'
+import type { ApiResult, ClinicLoginResult, ClinicSetupInput, ClinicRecoverInput, StaffSummary } from '@shared/types'
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -117,6 +118,24 @@ export function registerIpcHandlers(): void {
       signUpClinic(input.ownerEmail, input.masterPassword)
         .then((signedUp) => (signedUp ? syncClinicAndStaff(clinicId) : undefined))
         .catch(() => undefined)
+
+      return { ok: true, data: loadClinicLoginResult() }
+    } catch (error) {
+      closeClinicDatabase()
+      return { ok: false, error: (error as Error).message }
+    }
+  })
+
+  // Recupera uma clínica que já existe na nuvem, mas não neste computador
+  // (ex: reinstalou o programa, trocou de computador, ou o banco local se
+  // perdeu por algum motivo). Baixa tudo de volta a partir do Supabase.
+  ipcMain.handle('clinic:recover', async (_event, input: ClinicRecoverInput): Promise<ApiResult<ClinicLoginResult>> => {
+    try {
+      if (hasClinicSetup()) throw new Error('Já existe uma clínica configurada neste computador')
+
+      const { clinicId } = await recoverClinicFromCloud(input)
+      setCurrentSession(clinicId)
+      writeAudit(clinicId, null, 'clinic_recovered', 'clinics')
 
       return { ok: true, data: loadClinicLoginResult() }
     } catch (error) {

@@ -6,6 +6,11 @@ export interface StaffSummary {
   role: StaffRole
 }
 
+export interface ClinicRecoverInput {
+  ownerEmail: string
+  masterPassword: string
+}
+
 export interface ClinicSetupInput {
   clinicName: string
   cnpj?: string

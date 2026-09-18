@@ -5,6 +5,7 @@ import type {
   ApiResult,
   ClinicLoginResult,
   ClinicSetupInput,
+  ClinicRecoverInput,
   StaffSummary,
   Patient,
   PatientInput,
@@ -44,6 +45,7 @@ declare global {
       ping: () => Promise<string>
       clinicExists: () => Promise<boolean>
       clinicCreate: (input: ClinicSetupInput) => Promise<ApiResult<ClinicLoginResult>>
+      clinicRecover: (input: ClinicRecoverInput) => Promise<ApiResult<ClinicLoginResult>>
       clinicLogin: (masterPassword: string) => Promise<ApiResult<ClinicLoginResult>>
       staffVerifyPin: (staffMemberId: string, pin: string) => Promise<ApiResult<StaffSummary>>
       syncNow: () => Promise<ApiResult<null>>

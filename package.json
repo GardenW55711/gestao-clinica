@@ -1,6 +1,6 @@
 {
   "name": "gestao-clinica",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Programa de gestão para clínicas e consultórios (agenda, estoque, vendas)",
   "main": "out/main/index.js",
   "author": "",

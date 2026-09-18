@@ -4,6 +4,7 @@ import type {
   ApiResult,
   ClinicLoginResult,
   ClinicSetupInput,
+  ClinicRecoverInput,
   StaffSummary,
   Patient,
   PatientInput,
@@ -48,6 +49,8 @@ const api = {
   clinicExists: (): Promise<boolean> => ipcRenderer.invoke('clinic:exists'),
   clinicCreate: (input: ClinicSetupInput): Promise<ApiResult<ClinicLoginResult>> =>
     ipcRenderer.invoke('clinic:create', input),
+  clinicRecover: (input: ClinicRecoverInput): Promise<ApiResult<ClinicLoginResult>> =>
+    ipcRenderer.invoke('clinic:recover', input),
   clinicLogin: (masterPassword: string): Promise<ApiResult<ClinicLoginResult>> =>
     ipcRenderer.invoke('clinic:login', masterPassword),
   staffVerifyPin: (staffMemberId: string, pin: string): Promise<ApiResult<StaffSummary>> =>

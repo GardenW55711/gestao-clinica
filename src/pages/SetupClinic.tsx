@@ -6,6 +6,8 @@ interface Props {
 }
 
 export function SetupClinic({ onDone }: Props): JSX.Element {
+  const [mode, setMode] = useState<'create' | 'recover'>('create')
+
   const [clinicName, setClinicName] = useState('')
   const [cnpj, setCnpj] = useState('')
   const [ownerName, setOwnerName] = useState('')
@@ -15,6 +17,9 @@ export function SetupClinic({ onDone }: Props): JSX.Element {
   const [ownerPin, setOwnerPin] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const [recoverEmail, setRecoverEmail] = useState('')
+  const [recoverPassword, setRecoverPassword] = useState('')
 
   async function handleSubmit(e: FormEvent): Promise<void> {
     e.preventDefault()
@@ -45,6 +50,69 @@ export function SetupClinic({ onDone }: Props): JSX.Element {
       return
     }
     onDone(result.data)
+  }
+
+  async function handleRecover(e: FormEvent): Promise<void> {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    const result = await window.api.clinicRecover({
+      ownerEmail: recoverEmail,
+      masterPassword: recoverPassword
+    })
+    setLoading(false)
+
+    if (!result.ok || !result.data) {
+      setError(result.error ?? 'Não foi possível recuperar a clínica')
+      return
+    }
+    onDone(result.data)
+  }
+
+  if (mode === 'recover') {
+    return (
+      <div className="centered-page">
+        <form className="card" onSubmit={handleRecover}>
+          <h1>Recuperar clínica da nuvem</h1>
+          <p className="subtitle">
+            Use se sua clínica já existe (em outro computador, ou se os dados sumiram deste). Vamos
+            baixar tudo de volta a partir da nuvem, usando o mesmo e-mail e senha mestra de sempre.
+          </p>
+
+          <label>
+            E-mail da clínica
+            <input type="email" value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} required />
+          </label>
+
+          <label>
+            Senha mestra
+            <input
+              type="password"
+              value={recoverPassword}
+              onChange={(e) => setRecoverPassword(e.target.value)}
+              required
+            />
+          </label>
+
+          {error && <p className="error">{error}</p>}
+
+          <button type="submit" disabled={loading}>
+            {loading ? 'Recuperando...' : 'Recuperar clínica'}
+          </button>
+
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => {
+              setMode('create')
+              setError(null)
+            }}
+          >
+            Na verdade, quero criar uma clínica nova
+          </button>
+        </form>
+      </div>
+    )
   }
 
   return (
@@ -119,6 +187,17 @@ export function SetupClinic({ onDone }: Props): JSX.Element {
 
         <button type="submit" disabled={loading}>
           {loading ? 'Criando...' : 'Criar clínica'}
+        </button>
+
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => {
+            setMode('recover')
+            setError(null)
+          }}
+        >
+          Já tenho uma clínica — recuperar da nuvem
         </button>
       </form>
     </div>
