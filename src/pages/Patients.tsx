@@ -20,7 +20,8 @@ export function Patients(): JSX.Element {
       emptyInput={emptyInput}
       fields={[
         { key: 'name', label: 'Nome', type: 'text', required: true },
-        { key: 'phone', label: 'Telefone', type: 'text' },
+        { key: 'phone', label: 'Telefone', type: 'phone' },
+        { key: 'cpf', label: 'CPF', type: 'cpf' },
         { key: 'email', label: 'E-mail', type: 'text' },
         { key: 'birthDate', label: 'Nascimento', type: 'date' },
         { key: 'lgpdConsent', label: 'Paciente autorizou o uso dos dados', type: 'checkbox', required: true }
@@ -28,6 +29,7 @@ export function Patients(): JSX.Element {
       columns={[
         { key: 'name', label: 'Nome' },
         { key: 'phone', label: 'Telefone' },
+        { key: 'cpf', label: 'CPF' },
         { key: 'email', label: 'E-mail' }
       ]}
     />

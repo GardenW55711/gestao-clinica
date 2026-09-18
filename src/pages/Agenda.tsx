@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { NewAppointmentForm } from '../components/NewAppointmentForm'
-import type { Appointment, AppointmentInput, AppointmentStatus, Patient, Professional, ProcedureType, Room } from '@shared/types'
+import { CompleteAppointmentModal } from '../components/CompleteAppointmentModal'
+import type {
+  Appointment,
+  AppointmentInput,
+  AppointmentStatus,
+  Patient,
+  Professional,
+  ProcedureType,
+  Room,
+  StockUsageItem
+} from '@shared/types'
 
 function toDateInputValue(d: Date): string {
   const y = d.getFullYear()
@@ -41,6 +51,7 @@ export function Agenda(): JSX.Element {
   const [rooms, setRooms] = useState<Room[]>([])
   const [formSlot, setFormSlot] = useState<{ professionalId: string; time: string } | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [completingId, setCompletingId] = useState<string | null>(null)
 
   async function loadAppointments(): Promise<void> {
     const result = await window.api.appointments.listByDate(date)
@@ -94,7 +105,19 @@ export function Agenda(): JSX.Element {
   }
 
   async function handleStatus(id: string, status: AppointmentStatus): Promise<void> {
+    if (status === 'completed') {
+      setCompletingId(id)
+      return
+    }
     await window.api.appointments.setStatus(id, status)
+    loadAppointments()
+  }
+
+  async function handleConfirmComplete(usedItems: StockUsageItem[]): Promise<void> {
+    if (!completingId) return
+    const result = await window.api.appointments.complete(completingId, usedItems)
+    if (!result.ok) throw new Error(result.error ?? 'Não foi possível finalizar')
+    setCompletingId(null)
     loadAppointments()
   }
 
@@ -183,6 +206,10 @@ export function Agenda(): JSX.Element {
           }}
           onSubmit={handleCreate}
         />
+      )}
+
+      {completingId && (
+        <CompleteAppointmentModal onCancel={() => setCompletingId(null)} onConfirm={handleConfirmComplete} />
       )}
     </div>
   )

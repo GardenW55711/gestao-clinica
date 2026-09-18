@@ -9,7 +9,7 @@ const links = [
   { to: '/rooms', label: 'Salas', end: false },
   { to: '/procedure-types', label: 'Tipos de procedimento', end: false },
   { to: '/estoque', label: 'Estoque', end: false },
-  { to: '/vendas', label: 'Vendas', end: false },
+  { to: '/vendas', label: 'Financeiro', end: false },
   { to: '/configuracoes', label: 'Configurações', end: false }
 ]
 

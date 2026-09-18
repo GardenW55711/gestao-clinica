@@ -1,6 +1,14 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 
+function maskPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 10) {
+    return digits.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2')
+  }
+  return digits.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2')
+}
+
 interface Clinic {
   id: string
   name: string
@@ -268,7 +276,12 @@ export default function App(): JSX.Element {
 
         <label>
           Seu telefone (com DDD)
-          <input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} required />
+          <input
+            value={patientPhone}
+            onChange={(e) => setPatientPhone(maskPhone(e.target.value))}
+            placeholder="(00) 00000-0000"
+            required
+          />
         </label>
 
         {error && <p className="error">{error}</p>}

@@ -1,11 +1,11 @@
 import { ipcMain } from 'electron'
 import { randomUUID } from 'crypto'
-import { desc, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull, lt } from 'drizzle-orm'
 import { getDb } from '../db/client'
 import { sales, saleItems, patients } from '../db/schema'
 import { getCurrentClinicId, getCurrentStaffMemberId } from '../session'
 import { consumeInventoryFefo } from '../inventory/fefo'
-import type { ApiResult, Sale, SaleInput } from '@shared/types'
+import type { ApiResult, FinancialSummary, PaymentMethod, Sale, SaleInput } from '@shared/types'
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -127,4 +127,61 @@ export function registerSalesHandlers(): void {
       return { ok: false, error: (error as Error).message }
     }
   })
+
+  // Painel financeiro: total, e quebra por forma de pagamento e por tipo de
+  // procedimento, num intervalo de datas (usado pelos botões Hoje/7 dias/Mês).
+  ipcMain.handle(
+    'sales:financialSummary',
+    (_e, params: { from: string; to: string }): ApiResult<FinancialSummary> => {
+      try {
+        const db = getDb()
+
+        const salesInRange = db
+          .select()
+          .from(sales)
+          .where(and(gte(sales.createdAt, params.from), lt(sales.createdAt, params.to), isNull(sales.deletedAt)))
+          .all()
+
+        const totalAmount = salesInRange.reduce((sum, s) => sum + s.totalAmount, 0)
+
+        const byPaymentMethodMap = new Map<PaymentMethod, number>()
+        for (const sale of salesInRange) {
+          byPaymentMethodMap.set(
+            sale.paymentMethod,
+            (byPaymentMethodMap.get(sale.paymentMethod) ?? 0) + sale.totalAmount
+          )
+        }
+
+        const saleIds = new Set(salesInRange.map((s) => s.id))
+        const itemsInRange = db
+          .select()
+          .from(saleItems)
+          .where(isNull(saleItems.deletedAt))
+          .all()
+          .filter((item) => saleIds.has(item.saleId))
+
+        const byProcedureTypeMap = new Map<string, number>()
+        for (const item of itemsInRange) {
+          if (item.kind !== 'procedimento') continue
+          byProcedureTypeMap.set(item.description, (byProcedureTypeMap.get(item.description) ?? 0) + item.subtotal)
+        }
+
+        return {
+          ok: true,
+          data: {
+            totalAmount,
+            byPaymentMethod: [...byPaymentMethodMap.entries()].map(([paymentMethod, total]) => ({
+              paymentMethod,
+              total
+            })),
+            byProcedureType: [...byProcedureTypeMap.entries()]
+              .map(([name, total]) => ({ name, total }))
+              .sort((a, b) => b.total - a.total)
+          }
+        }
+      } catch (error) {
+        return { ok: false, error: (error as Error).message }
+      }
+    }
+  )
 }

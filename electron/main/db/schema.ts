@@ -113,6 +113,7 @@ export const inventoryMovements = sqliteTable('inventory_movements', {
   quantity: real('quantity').notNull(),
   reason: text('reason'),
   relatedSaleId: text('related_sale_id'),
+  relatedAppointmentId: text('related_appointment_id'),
   createdBy: text('created_by')
 })
 

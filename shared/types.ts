@@ -117,6 +117,11 @@ export interface AppointmentInput {
   notes?: string
 }
 
+export interface StockUsageItem {
+  itemId: string
+  quantity: number
+}
+
 export interface InventoryItemInput {
   name: string
   category?: string
@@ -182,6 +187,12 @@ export interface SaleItem {
   quantity: number
   unitPrice: number
   subtotal: number
+}
+
+export interface FinancialSummary {
+  totalAmount: number
+  byPaymentMethod: { paymentMethod: PaymentMethod; total: number }[]
+  byProcedureType: { name: string; total: number }[]
 }
 
 export interface Sale {

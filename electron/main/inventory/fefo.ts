@@ -18,7 +18,8 @@ export function consumeInventoryFefo(
     itemId: string
     quantity: number
     reason: string | null
-    relatedSaleId: string | null
+    relatedSaleId?: string | null
+    relatedAppointmentId?: string | null
     createdBy: string | null
   }
 ): void {
@@ -62,7 +63,8 @@ export function consumeInventoryFefo(
         type: 'saida',
         quantity: take,
         reason: params.reason,
-        relatedSaleId: params.relatedSaleId,
+        relatedSaleId: params.relatedSaleId ?? null,
+        relatedAppointmentId: params.relatedAppointmentId ?? null,
         createdBy: params.createdBy,
         createdAt: timestamp,
         updatedAt: timestamp,

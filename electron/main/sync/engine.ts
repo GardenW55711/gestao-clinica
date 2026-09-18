@@ -191,6 +191,7 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       quantity: row.quantity,
       reason: row.reason,
       related_sale_id: row.relatedSaleId,
+      related_appointment_id: row.relatedAppointmentId,
       created_by: row.createdBy,
       created_at: row.createdAt,
       updated_at: row.updatedAt,

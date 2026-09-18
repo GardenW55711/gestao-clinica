@@ -338,6 +338,41 @@ button:disabled {
   margin: 4px 0;
 }
 
+.financial-panel {
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.period-picker {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.period-btn {
+  margin-top: 0;
+  background: #e5e7eb;
+  color: #333;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.period-btn.active {
+  background: #2563eb;
+  color: white;
+}
+
+.financial-breakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 12px;
+}
+
+.financial-breakdown h3 {
+  margin-bottom: 8px;
+}
+
 .settings-card {
   padding: 20px;
   margin-bottom: 24px;

@@ -3,8 +3,9 @@ import { randomUUID } from 'crypto'
 import { and, eq, isNull, gte, gt, lt, ne } from 'drizzle-orm'
 import { getDb } from '../db/client'
 import { appointments, patients, professionals, rooms, procedureTypes } from '../db/schema'
-import { getCurrentClinicId } from '../session'
-import type { ApiResult, Appointment, AppointmentInput, AppointmentStatus } from '@shared/types'
+import { getCurrentClinicId, getCurrentStaffMemberId } from '../session'
+import { consumeInventoryFefo } from '../inventory/fefo'
+import type { ApiResult, Appointment, AppointmentInput, AppointmentStatus, StockUsageItem } from '@shared/types'
 
 function requireClinicId(): string {
   const id = getCurrentClinicId()
@@ -194,6 +195,42 @@ export function registerAppointmentHandlers(): void {
           .set({ status: params.status, updatedAt: nowIso(), syncStatus: 'pending' })
           .where(eq(appointments.id, params.id))
           .run()
+        return { ok: true, data: null }
+      } catch (error) {
+        return { ok: false, error: (error as Error).message }
+      }
+    }
+  )
+
+  // Marca o atendimento como realizado e, na mesma hora, dá baixa nos
+  // produtos usados (se houver) — evita esquecer de acertar o estoque depois.
+  ipcMain.handle(
+    'appointments:complete',
+    (_e, params: { id: string; usedItems: StockUsageItem[] }): ApiResult<null> => {
+      try {
+        const clinicId = requireClinicId()
+        const db = getDb()
+        const staffMemberId = getCurrentStaffMemberId()
+
+        db.transaction((tx) => {
+          tx.update(appointments)
+            .set({ status: 'completed', updatedAt: nowIso(), syncStatus: 'pending' })
+            .where(eq(appointments.id, params.id))
+            .run()
+
+          for (const item of params.usedItems) {
+            if (item.quantity <= 0) continue
+            consumeInventoryFefo(tx, {
+              clinicId,
+              itemId: item.itemId,
+              quantity: item.quantity,
+              reason: 'Uso em atendimento',
+              relatedAppointmentId: params.id,
+              createdBy: staffMemberId
+            })
+          }
+        })
+
         return { ok: true, data: null }
       } catch (error) {
         return { ok: false, error: (error as Error).message }

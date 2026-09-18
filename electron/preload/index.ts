@@ -23,8 +23,10 @@ import type {
   InventoryBatchAlert,
   Sale,
   SaleInput,
+  FinancialSummary,
   ClinicSettings,
-  BookingRequestSummary
+  BookingRequestSummary,
+  StockUsageItem
 } from '@shared/types'
 
 function crudApi<Dto, Input>(prefix: string): {
@@ -61,7 +63,9 @@ const api = {
     create: (input: AppointmentInput): Promise<ApiResult<Appointment>> =>
       ipcRenderer.invoke('appointments:create', input),
     setStatus: (id: string, status: AppointmentStatus): Promise<ApiResult<null>> =>
-      ipcRenderer.invoke('appointments:setStatus', { id, status })
+      ipcRenderer.invoke('appointments:setStatus', { id, status }),
+    complete: (id: string, usedItems: StockUsageItem[]): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('appointments:complete', { id, usedItems })
   },
   inventory: {
     listItems: (): Promise<ApiResult<InventoryItemSummary[]>> => ipcRenderer.invoke('inventory:items:list'),
@@ -76,7 +80,9 @@ const api = {
   },
   sales: {
     list: (): Promise<ApiResult<Sale[]>> => ipcRenderer.invoke('sales:list'),
-    create: (input: SaleInput): Promise<ApiResult<null>> => ipcRenderer.invoke('sales:create', input)
+    create: (input: SaleInput): Promise<ApiResult<null>> => ipcRenderer.invoke('sales:create', input),
+    financialSummary: (from: string, to: string): Promise<ApiResult<FinancialSummary>> =>
+      ipcRenderer.invoke('sales:financialSummary', { from, to })
   },
   clinicSettings: {
     get: (): Promise<ApiResult<ClinicSettings>> => ipcRenderer.invoke('clinic:getSettings'),

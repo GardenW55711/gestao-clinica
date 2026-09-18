@@ -24,8 +24,10 @@ import type {
   InventoryBatchAlert,
   Sale,
   SaleInput,
+  FinancialSummary,
   ClinicSettings,
-  BookingRequestSummary
+  BookingRequestSummary,
+  StockUsageItem
 } from '@shared/types'
 
 interface CrudApi<Dto, Input> {
@@ -53,6 +55,7 @@ declare global {
         listByDate: (dateIso: string) => Promise<ApiResult<Appointment[]>>
         create: (input: AppointmentInput) => Promise<ApiResult<Appointment>>
         setStatus: (id: string, status: AppointmentStatus) => Promise<ApiResult<null>>
+        complete: (id: string, usedItems: StockUsageItem[]) => Promise<ApiResult<null>>
       }
       inventory: {
         listItems: () => Promise<ApiResult<InventoryItemSummary[]>>
@@ -65,6 +68,7 @@ declare global {
       sales: {
         list: () => Promise<ApiResult<Sale[]>>
         create: (input: SaleInput) => Promise<ApiResult<null>>
+        financialSummary: (from: string, to: string) => Promise<ApiResult<FinancialSummary>>
       }
       clinicSettings: {
         get: () => Promise<ApiResult<ClinicSettings>>

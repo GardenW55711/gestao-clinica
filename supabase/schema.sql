@@ -229,11 +229,14 @@ create table if not exists public.inventory_movements (
   quantity numeric not null,
   reason text,
   related_sale_id uuid,
+  related_appointment_id uuid,
   created_by uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
+
+alter table public.inventory_movements add column if not exists related_appointment_id uuid;
 
 alter table public.inventory_movements enable row level security;
 

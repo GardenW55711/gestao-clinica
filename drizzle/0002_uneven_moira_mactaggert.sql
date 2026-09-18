@@ -1,0 +1,1 @@
+ALTER TABLE `inventory_movements` ADD `related_appointment_id` text;

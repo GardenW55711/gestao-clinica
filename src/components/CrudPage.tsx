@@ -1,10 +1,11 @@
 import { FormEvent, ReactNode, useEffect, useState } from 'react'
 import type { ApiResult } from '@shared/types'
+import { maskCpf, maskPhone } from '../utils/masks'
 
 export interface FieldConfig<Input> {
   key: keyof Input
   label: string
-  type: 'text' | 'number' | 'checkbox' | 'date'
+  type: 'text' | 'number' | 'checkbox' | 'date' | 'cpf' | 'phone'
   required?: boolean
 }
 
@@ -89,6 +90,17 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
                 type="checkbox"
                 checked={Boolean(form[field.key])}
                 onChange={(e) => updateField(field.key, e.target.checked)}
+              />
+            ) : field.type === 'cpf' || field.type === 'phone' ? (
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder={field.type === 'cpf' ? '000.000.000-00' : '(00) 00000-0000'}
+                value={(form[field.key] as string | undefined) ?? ''}
+                required={field.required}
+                onChange={(e) =>
+                  updateField(field.key, field.type === 'cpf' ? maskCpf(e.target.value) : maskPhone(e.target.value))
+                }
               />
             ) : (
               <input

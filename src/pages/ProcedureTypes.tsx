@@ -1,4 +1,5 @@
 import { CrudPage } from '../components/CrudPage'
+import { formatCurrency } from '../utils/masks'
 import type { ProcedureType, ProcedureTypeInput } from '@shared/types'
 
 const emptyInput: ProcedureTypeInput = { name: '', durationMinutes: 30, defaultPrice: 0, requiresRoom: false }
@@ -22,7 +23,7 @@ export function ProcedureTypes(): JSX.Element {
         {
           key: 'defaultPrice',
           label: 'Preço padrão',
-          render: (row) => `R$ ${row.defaultPrice.toFixed(2)}`
+          render: (row) => formatCurrency(row.defaultPrice)
         }
       ]}
     />

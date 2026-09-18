@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { formatCurrency } from '../utils/masks'
 import type {
+  FinancialSummary,
   InventoryItemSummary,
   Patient,
   PaymentMethod,
@@ -15,11 +17,36 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   outro: 'Outro'
 }
 
+type PeriodPreset = 'today' | '7d' | 'month'
+
+const PERIOD_LABELS: Record<PeriodPreset, string> = {
+  today: 'Hoje',
+  '7d': 'Últimos 7 dias',
+  month: 'Este mês'
+}
+
+function getRange(preset: PeriodPreset): { from: string; to: string } {
+  const now = new Date()
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+  let from: Date
+  if (preset === 'today') {
+    from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+  } else if (preset === '7d') {
+    from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0)
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+  }
+  return { from: from.toISOString(), to: to.toISOString() }
+}
+
 export function Vendas(): JSX.Element {
   const [patients, setPatients] = useState<Patient[]>([])
   const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([])
   const [inventoryItems, setInventoryItems] = useState<InventoryItemSummary[]>([])
   const [sales, setSales] = useState<Sale[]>([])
+
+  const [period, setPeriod] = useState<PeriodPreset>('month')
+  const [summary, setSummary] = useState<FinancialSummary | null>(null)
 
   const [patientId, setPatientId] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro')
@@ -46,9 +73,20 @@ export function Vendas(): JSX.Element {
     if (s.ok && s.data) setSales(s.data)
   }
 
+  async function loadSummary(): Promise<void> {
+    const { from, to } = getRange(period)
+    const result = await window.api.sales.financialSummary(from, to)
+    if (result.ok && result.data) setSummary(result.data)
+  }
+
   useEffect(() => {
     loadAll()
   }, [])
+
+  useEffect(() => {
+    loadSummary()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period])
 
   function handleSelectRef(id: string): void {
     setSelectedRefId(id)
@@ -113,12 +151,76 @@ export function Vendas(): JSX.Element {
     setItems([])
     setPatientId('')
     loadAll()
+    loadSummary()
   }
 
   return (
     <div>
-      <h1>Vendas</h1>
+      <h1>Financeiro</h1>
+      <p className="subtitle">Controle de faturamento da clínica — cobranças por procedimento e produto.</p>
 
+      <div className="card financial-panel">
+        <div className="period-picker">
+          {(Object.keys(PERIOD_LABELS) as PeriodPreset[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={p === period ? 'period-btn active' : 'period-btn'}
+              onClick={() => setPeriod(p)}
+            >
+              {PERIOD_LABELS[p]}
+            </button>
+          ))}
+        </div>
+
+        <p className="sale-total">Faturamento no período: {formatCurrency(summary?.totalAmount ?? 0)}</p>
+
+        <div className="financial-breakdown">
+          <div>
+            <h3>Por forma de pagamento</h3>
+            <table className="data-table">
+              <tbody>
+                {(summary?.byPaymentMethod ?? []).map((row) => (
+                  <tr key={row.paymentMethod}>
+                    <td>{PAYMENT_LABELS[row.paymentMethod]}</td>
+                    <td>{formatCurrency(row.total)}</td>
+                  </tr>
+                ))}
+                {(!summary || summary.byPaymentMethod.length === 0) && (
+                  <tr>
+                    <td colSpan={2} className="empty-row">
+                      Sem vendas no período.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <h3>Por tipo de procedimento</h3>
+            <table className="data-table">
+              <tbody>
+                {(summary?.byProcedureType ?? []).map((row) => (
+                  <tr key={row.name}>
+                    <td>{row.name}</td>
+                    <td>{formatCurrency(row.total)}</td>
+                  </tr>
+                ))}
+                {(!summary || summary.byProcedureType.length === 0) && (
+                  <tr>
+                    <td colSpan={2} className="empty-row">
+                      Sem procedimentos cobrados no período.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <h2>Registrar cobrança</h2>
       <div className="card sale-form">
         <label>
           Paciente
@@ -201,8 +303,8 @@ export function Vendas(): JSX.Element {
               <tr key={i}>
                 <td>{item.description}</td>
                 <td>{item.quantity}</td>
-                <td>R$ {item.unitPrice.toFixed(2)}</td>
-                <td>R$ {(item.quantity * item.unitPrice).toFixed(2)}</td>
+                <td>{formatCurrency(item.unitPrice)}</td>
+                <td>{formatCurrency(item.quantity * item.unitPrice)}</td>
                 <td>
                   <button type="button" className="link-button" onClick={() => handleRemoveItem(i)}>
                     Remover
@@ -220,7 +322,7 @@ export function Vendas(): JSX.Element {
           </tbody>
         </table>
 
-        <p className="sale-total">Total: R$ {total.toFixed(2)}</p>
+        <p className="sale-total">Total: {formatCurrency(total)}</p>
 
         <label>
           Forma de pagamento
@@ -257,7 +359,7 @@ export function Vendas(): JSX.Element {
               <td>{new Date(sale.createdAt).toLocaleString('pt-BR')}</td>
               <td>{sale.patientName}</td>
               <td>{sale.items.map((i) => i.description).join(', ')}</td>
-              <td>R$ {sale.totalAmount.toFixed(2)}</td>
+              <td>{formatCurrency(sale.totalAmount)}</td>
               <td>{PAYMENT_LABELS[sale.paymentMethod]}</td>
             </tr>
           ))}
