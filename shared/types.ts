@@ -6,6 +6,13 @@ export interface StaffSummary {
   role: StaffRole
 }
 
+export interface UpdateStatus {
+  state: 'idle' | 'checking' | 'downloading' | 'ready' | 'uptodate' | 'error'
+  version?: string
+  percent?: number
+  message?: string
+}
+
 export interface ClinicRecoverInput {
   ownerEmail: string
   masterPassword: string

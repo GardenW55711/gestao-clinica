@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useClinic } from '../context/ClinicContext'
 import { ThemeToggle } from './ThemeToggle'
+import { UpdateBanner, VersionFooter } from './UpdateInfo'
 
 const links = [
   { to: '/', label: 'Início', end: true },
@@ -34,8 +35,10 @@ export function AppShell(): JSX.Element {
           ))}
         </nav>
         <ThemeToggle />
+        <VersionFooter />
       </aside>
       <main className="content">
+        <UpdateBanner />
         <Outlet />
       </main>
     </div>

@@ -6,6 +6,7 @@ import type {
   ClinicLoginResult,
   ClinicSetupInput,
   ClinicRecoverInput,
+  UpdateStatus,
   StaffSummary,
   Patient,
   PatientInput,
@@ -49,6 +50,13 @@ declare global {
       clinicLogin: (masterPassword: string) => Promise<ApiResult<ClinicLoginResult>>
       staffVerifyPin: (staffMemberId: string, pin: string) => Promise<ApiResult<StaffSummary>>
       syncNow: () => Promise<ApiResult<null>>
+      appVersion: () => Promise<string>
+      update: {
+        getStatus: () => Promise<UpdateStatus>
+        check: () => Promise<void>
+        installNow: () => Promise<void>
+        onStatus: (cb: (s: UpdateStatus) => void) => () => void
+      }
       patients: CrudApi<Patient, PatientInput>
       professionals: CrudApi<Professional, ProfessionalInput>
       rooms: CrudApi<Room, RoomInput>

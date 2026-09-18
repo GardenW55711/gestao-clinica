@@ -5,6 +5,7 @@ import type {
   ClinicLoginResult,
   ClinicSetupInput,
   ClinicRecoverInput,
+  UpdateStatus,
   StaffSummary,
   Patient,
   PatientInput,
@@ -56,6 +57,17 @@ const api = {
   staffVerifyPin: (staffMemberId: string, pin: string): Promise<ApiResult<StaffSummary>> =>
     ipcRenderer.invoke('staff:verifyPin', { staffMemberId, pin }),
   syncNow: (): Promise<ApiResult<null>> => ipcRenderer.invoke('sync:now'),
+  appVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
+  update: {
+    getStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:getStatus'),
+    check: (): Promise<void> => ipcRenderer.invoke('update:check'),
+    installNow: (): Promise<void> => ipcRenderer.invoke('update:installNow'),
+    onStatus: (cb: (s: UpdateStatus) => void): (() => void) => {
+      const handler = (_e: unknown, s: UpdateStatus): void => cb(s)
+      ipcRenderer.on('update:status', handler)
+      return () => ipcRenderer.removeListener('update:status', handler)
+    }
+  },
   patients: crudApi<Patient, PatientInput>('patients'),
   professionals: crudApi<Professional, ProfessionalInput>('professionals'),
   rooms: crudApi<Room, RoomInput>('rooms'),

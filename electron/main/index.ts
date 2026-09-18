@@ -1,8 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import electronUpdater from 'electron-updater'
-const { autoUpdater } = electronUpdater
+import { setupUpdater } from './updater'
 import { registerIpcHandlers } from './ipc/handlers'
 import { registerCatalogHandlers } from './ipc/catalog'
 import { registerAppointmentHandlers } from './ipc/appointments'
@@ -61,13 +60,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 
-  // Só faz sentido checar atualização na versão instalada de verdade — em
-  // desenvolvimento não existe nenhuma versão publicada pra comparar.
-  if (app.isPackaged) {
-    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-      console.error('[auto-update] falha ao checar atualização:', err)
-    })
-  }
+  setupUpdater()
 })
 
 app.on('window-all-closed', () => {
