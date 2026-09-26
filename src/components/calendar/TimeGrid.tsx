@@ -7,7 +7,8 @@ import {
   formatClock,
   layoutOverlaps,
   minutesOfDay,
-  minutesToClock
+  minutesToClock,
+  type Unavailable
 } from '../../utils/calendar'
 import { Icon } from '../Icons'
 
@@ -31,6 +32,7 @@ interface Props {
   colorOf: (professionalId: string) => string
   showProfessional: boolean
   scrollKey: string
+  unavailable?: Map<string, Unavailable[]>
   onCreate: (column: GridColumn, time: string) => void
   onOpen: (appt: Appointment, rect: DOMRect) => void
 }
@@ -44,6 +46,7 @@ export function TimeGrid({
   colorOf,
   showProfessional,
   scrollKey,
+  unavailable,
   onCreate,
   onOpen
 }: Props): JSX.Element {
@@ -138,6 +141,21 @@ export function TimeGrid({
                 onMouseLeave={() => setGhost(null)}
                 onClick={(e) => onCreate(col, minutesToClock(minutesAt(e)))}
               >
+                {(unavailable?.get(col.key) ?? []).map((u, i) => {
+                  const from = Math.max(u.startMin, startHour * 60)
+                  const to = Math.min(u.endMin, endHour * 60)
+                  if (to <= from) return null
+                  return (
+                    <div
+                      key={i}
+                      className={u.kind === 'block' ? 'tg-block' : 'tg-off'}
+                      style={{ top: (from - startHour * 60) * PX_PER_MIN, height: (to - from) * PX_PER_MIN }}
+                    >
+                      {u.label && (to - from) * PX_PER_MIN >= 22 && <span>{u.label}</span>}
+                    </div>
+                  )
+                })}
+
                 {ghostHere && (
                   <div
                     className="tg-ghost"

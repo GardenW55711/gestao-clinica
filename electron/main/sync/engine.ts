@@ -17,7 +17,11 @@ import {
   sales,
   saleItems,
   bookingRequests,
-  procedureTypeItems
+  procedureTypeItems,
+  installments,
+  expenses,
+  professionalWorkingHours,
+  scheduleBlocks
 } from '../db/schema'
 
 /**
@@ -76,7 +80,7 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
     const clinic = db.select().from(clinics).where(eq(clinics.id, clinicId)).get()
     if (!clinic) throw new Error('Clínica local não encontrada')
 
-    const { error: clinicError } = await supabase.from('clinics').upsert({
+    const clinicRow = {
       id: clinic.id,
       auth_user_id: sessionData.session.user.id,
       name: clinic.name,
@@ -85,7 +89,18 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       self_booking_enabled: clinic.selfBookingEnabled,
       created_at: clinic.createdAt,
       updated_at: clinic.updatedAt
+    }
+    let { error: clinicError } = await supabase.from('clinics').upsert({
+      ...clinicRow,
+      card_fee_debit_percent: clinic.cardFeeDebitPercent,
+      card_fee_credit_percent: clinic.cardFeeCreditPercent,
+      card_fee_credit_installment_percent: clinic.cardFeeCreditInstallmentPercent
     })
+    // Nuvem ainda sem as colunas de taxa (schema.sql não atualizado): envia o básico.
+    if (clinicError && /card_fee/.test(clinicError.message)) {
+      console.warn('[sync] taxas de cartão aguardando atualização da nuvem')
+      ;({ error: clinicError } = await supabase.from('clinics').upsert(clinicRow))
+    }
     if (clinicError) throw new Error(`clinics: ${clinicError.message}`)
 
     await pushPendingTable(supabase, staffMembers, 'staff_members', (row) => ({
@@ -115,18 +130,31 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       deleted_at: row.deletedAt
     }))
 
-    await pushPendingTable(supabase, professionals, 'professionals', (row) => ({
-      id: row.id,
-      clinic_id: row.clinicId,
-      staff_member_id: row.staffMemberId,
-      name: row.name,
-      specialty: row.specialty,
-      color: row.color,
-      active: row.active,
-      created_at: row.createdAt,
-      updated_at: row.updatedAt,
-      deleted_at: row.deletedAt
-    }))
+    {
+      const professionalRow = (row: Record<string, unknown>): Record<string, unknown> => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        staff_member_id: row.staffMemberId,
+        name: row.name,
+        specialty: row.specialty,
+        color: row.color,
+        active: row.active,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      })
+      try {
+        await pushPendingTable(supabase, professionals, 'professionals', (row) => ({
+          ...professionalRow(row),
+          commission_percent: row.commissionPercent
+        }))
+      } catch (error) {
+        if (!/commission_percent/.test((error as Error).message)) throw error
+        // Nuvem sem a coluna de comissão: envia sem ela (a comissão sobe depois de rodar o schema.sql).
+        console.warn('[sync] comissão aguardando atualização da nuvem')
+        await pushPendingTable(supabase, professionals, 'professionals', professionalRow)
+      }
+    }
 
     await pushPendingTable(supabase, rooms, 'rooms', (row) => ({
       id: row.id,
@@ -218,6 +246,8 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       patient_id: row.patientId,
       appointment_id: row.appointmentId,
       professional_id: row.professionalId,
+      gross_amount_cents: row.grossAmountCents,
+      discount_cents: row.discountCents,
       total_amount_cents: row.totalAmountCents,
       payment_method: row.paymentMethod,
       status: row.status,
@@ -226,6 +256,72 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt
     })))
+
+    await pushMoneyTable('installments', () =>
+      pushPendingTable(supabase, installments, 'installments', (row) => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        sale_id: row.saleId,
+        number: row.number,
+        total_installments: row.totalInstallments,
+        amount_cents: row.amountCents,
+        due_date: row.dueDate,
+        paid_at: row.paidAt,
+        payment_method: row.paymentMethod,
+        fee_cents: row.feeCents,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      }))
+    )
+
+    await pushMoneyTable('expenses', () =>
+      pushPendingTable(supabase, expenses, 'expenses', (row) => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        description: row.description,
+        category: row.category,
+        kind: row.kind,
+        amount_cents: row.amountCents,
+        due_date: row.dueDate,
+        paid_at: row.paidAt,
+        recurring_monthly: row.recurringMonthly,
+        recurrence_group_id: row.recurrenceGroupId,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      }))
+    )
+
+    await pushMoneyTable('professional_working_hours', () =>
+      pushPendingTable(supabase, professionalWorkingHours, 'professional_working_hours', (row) => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        professional_id: row.professionalId,
+        weekday: row.weekday,
+        start_time: row.startTime,
+        end_time: row.endTime,
+        break_start: row.breakStart,
+        break_end: row.breakEnd,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      }))
+    )
+
+    await pushMoneyTable('schedule_blocks', () =>
+      pushPendingTable(supabase, scheduleBlocks, 'schedule_blocks', (row) => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        professional_id: row.professionalId,
+        start_at: row.startAt,
+        end_at: row.endAt,
+        reason: row.reason,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      }))
+    )
 
     await pushMoneyTable('sale_items', () => pushPendingTable(supabase, saleItems, 'sale_items', (row) => ({
       id: row.id,

@@ -1,10 +1,3 @@
-export const PAYMENT_LABELS = {
-  dinheiro: 'Dinheiro',
-  cartao: 'Cartão',
-  pix: 'Pix',
-  outro: 'Outro'
-} as const
-
 export type PeriodMode = 'today' | '7d' | 'month' | 'custom'
 export type Granularity = 'day' | 'month'
 

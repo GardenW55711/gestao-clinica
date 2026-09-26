@@ -1,102 +1,12 @@
 /// <reference types="vite/client" />
 
 import type { ElectronAPI } from '@electron-toolkit/preload'
-import type {
-  ApiResult,
-  ClinicLoginResult,
-  ClinicSetupInput,
-  ClinicRecoverInput,
-  UpdateStatus,
-  StaffSummary,
-  Patient,
-  PatientInput,
-  Professional,
-  ProfessionalInput,
-  Room,
-  RoomInput,
-  ProcedureType,
-  ProcedureTypeInput,
-  Appointment,
-  AppointmentInput,
-  AppointmentStatus,
-  InventoryItemInput,
-  InventoryItemSummary,
-  InventoryEntryInput,
-  InventoryExitInput,
-  InventoryBatchAlert,
-  Sale,
-  SaleInput,
-  FinancialSummary,
-  FinancialSeriesPoint,
-  ClinicSettings,
-  BookingRequestSummary,
-  StockUsageItem
-} from '@shared/types'
+import type { Api } from '../electron/preload/index'
 
-interface CrudApi<Dto, Input> {
-  list: () => Promise<ApiResult<Dto[]>>
-  create: (input: Input) => Promise<ApiResult<Dto>>
-  update: (id: string, input: Input) => Promise<ApiResult<Dto>>
-  remove: (id: string) => Promise<ApiResult<null>>
-}
-
+// O tipo da ponte (window.api) vem direto do preload, para nunca ficar desatualizado.
 declare global {
   interface Window {
     electron: ElectronAPI
-    api: {
-      ping: () => Promise<string>
-      clinicExists: () => Promise<boolean>
-      clinicCreate: (input: ClinicSetupInput) => Promise<ApiResult<ClinicLoginResult>>
-      clinicRecover: (input: ClinicRecoverInput) => Promise<ApiResult<ClinicLoginResult>>
-      clinicLogin: (masterPassword: string) => Promise<ApiResult<ClinicLoginResult>>
-      staffVerifyPin: (staffMemberId: string, pin: string) => Promise<ApiResult<StaffSummary>>
-      syncNow: () => Promise<ApiResult<null>>
-      appVersion: () => Promise<string>
-      update: {
-        getStatus: () => Promise<UpdateStatus>
-        check: () => Promise<void>
-        installNow: () => Promise<void>
-        onStatus: (cb: (s: UpdateStatus) => void) => () => void
-      }
-      patients: CrudApi<Patient, PatientInput>
-      professionals: CrudApi<Professional, ProfessionalInput>
-      rooms: CrudApi<Room, RoomInput>
-      procedureTypes: CrudApi<ProcedureType, ProcedureTypeInput>
-      appointments: {
-        listByDate: (dateIso: string) => Promise<ApiResult<Appointment[]>>
-        listRange: (from: string, to: string) => Promise<ApiResult<Appointment[]>>
-        create: (input: AppointmentInput) => Promise<ApiResult<Appointment>>
-        setStatus: (id: string, status: AppointmentStatus) => Promise<ApiResult<null>>
-        complete: (id: string, usedItems: StockUsageItem[]) => Promise<ApiResult<null>>
-      }
-      inventory: {
-        listItems: () => Promise<ApiResult<InventoryItemSummary[]>>
-        createItem: (input: InventoryItemInput) => Promise<ApiResult<InventoryItemSummary>>
-        removeItem: (id: string) => Promise<ApiResult<null>>
-        addEntry: (input: InventoryEntryInput) => Promise<ApiResult<null>>
-        addExit: (input: InventoryExitInput) => Promise<ApiResult<null>>
-        expiringSoon: () => Promise<ApiResult<InventoryBatchAlert[]>>
-      }
-      sales: {
-        list: () => Promise<ApiResult<Sale[]>>
-        create: (input: SaleInput) => Promise<ApiResult<null>>
-        financialSummary: (from: string, to: string) => Promise<ApiResult<FinancialSummary>>
-        financialSeries: (
-          from: string,
-          to: string,
-          granularity: 'day' | 'month'
-        ) => Promise<ApiResult<FinancialSeriesPoint[]>>
-      }
-      clinicSettings: {
-        get: () => Promise<ApiResult<ClinicSettings>>
-        setSelfBooking: (enabled: boolean) => Promise<ApiResult<null>>
-      }
-      procedureTypeBookable: (id: string, enabled: boolean) => Promise<ApiResult<null>>
-      bookingRequests: {
-        listPending: () => Promise<ApiResult<BookingRequestSummary[]>>
-        approve: (id: string) => Promise<ApiResult<null>>
-        reject: (id: string) => Promise<ApiResult<null>>
-      }
-    }
+    api: Api
   }
 }

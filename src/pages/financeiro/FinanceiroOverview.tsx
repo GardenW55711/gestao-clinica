@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { RankingBars, SeriesChart } from '../../components/Charts'
 import { formatCurrency } from '../../utils/masks'
 import type { FinancialSeriesPoint, FinancialSummary } from '@shared/types'
-import { Granularity, PAYMENT_LABELS, PERIOD_LABELS, PeriodMode, parseInputDate, presetRange } from './periods'
+import { PAYMENT_LABELS } from '@shared/types'
+import { Granularity, PERIOD_LABELS, PeriodMode, parseInputDate, presetRange } from './periods'
 
 export function FinanceiroOverview(): JSX.Element {
   const [mode, setMode] = useState<PeriodMode>('month')

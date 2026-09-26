@@ -32,6 +32,26 @@ interface BusySlot {
   end_at: string
 }
 
+interface WorkingHours {
+  professional_id: string
+  weekday: number
+  start_time: string
+  end_time: string
+  break_start: string | null
+  break_end: string | null
+}
+
+interface ScheduleBlock {
+  professional_id: string | null
+  start_at: string
+  end_at: string
+}
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+
 function getClinicIdFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get('clinic')
 }
@@ -62,6 +82,8 @@ export default function App(): JSX.Element {
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([])
   const [busySlots, setBusySlots] = useState<BusySlot[]>([])
+  const [workingHours, setWorkingHours] = useState<WorkingHours[]>([])
+  const [blocks, setBlocks] = useState<ScheduleBlock[]>([])
 
   const [procedureTypeId, setProcedureTypeId] = useState('')
   const [professionalId, setProfessionalId] = useState('')
@@ -96,6 +118,17 @@ export default function App(): JSX.Element {
       setProfessionals((profRes.data as Professional[]) ?? [])
       setProcedureTypes((procRes.data as ProcedureType[]) ?? [])
       setBusySlots((busyRes.data as BusySlot[]) ?? [])
+      // Horário de trabalho e bloqueios: se a clínica ainda não atualizou a nuvem, essas
+      // consultas falham e a página segue como antes (sem essas restrições).
+      const [hoursRes, blocksRes] = await Promise.all([
+        supabase
+          .from('public_working_hours')
+          .select('professional_id,weekday,start_time,end_time,break_start,break_end')
+          .eq('clinic_id', clinicId),
+        supabase.from('public_schedule_blocks').select('professional_id,start_at,end_at').eq('clinic_id', clinicId)
+      ])
+      setWorkingHours(hoursRes.error ? [] : ((hoursRes.data as WorkingHours[]) ?? []))
+      setBlocks(blocksRes.error ? [] : ((blocksRes.data as ScheduleBlock[]) ?? []))
       setLoading(false)
     }
 
@@ -114,6 +147,29 @@ export default function App(): JSX.Element {
 
       const end = new Date(start.getTime() + selectedProcedure.duration_minutes * 60000)
 
+      // Bloqueios da clínica (férias, feriado...) do profissional ou de todos.
+      const blocked = blocks.some(
+        (b) =>
+          (b.professional_id === null || b.professional_id === professionalId) &&
+          start < new Date(b.end_at) &&
+          end > new Date(b.start_at)
+      )
+      if (blocked) return false
+
+      // Horário de trabalho: se o profissional tem horário cadastrado, só dentro dele e fora do intervalo.
+      const mine = workingHours.filter((w) => w.professional_id === professionalId)
+      if (mine.length > 0) {
+        const day = mine.find((w) => w.weekday === start.getDay())
+        if (!day) return false
+        const startMin = start.getHours() * 60 + start.getMinutes()
+        const endMin = end.getHours() * 60 + end.getMinutes()
+        const sameDay = start.toDateString() === end.toDateString()
+        if (!sameDay || startMin < toMinutes(day.start_time) || endMin > toMinutes(day.end_time)) return false
+        if (day.break_start && day.break_end && startMin < toMinutes(day.break_end) && endMin > toMinutes(day.break_start)) {
+          return false
+        }
+      }
+
       return !busySlots.some((b) => {
         if (b.professional_id !== professionalId) return false
         const busyStart = new Date(b.start_at)
@@ -121,7 +177,7 @@ export default function App(): JSX.Element {
         return start < busyEnd && end > busyStart
       })
     })
-  }, [selectedProcedure, professionalId, date, busySlots])
+  }, [selectedProcedure, professionalId, date, busySlots, workingHours, blocks])
 
   async function handleSubmit(e: FormEvent): Promise<void> {
     e.preventDefault()

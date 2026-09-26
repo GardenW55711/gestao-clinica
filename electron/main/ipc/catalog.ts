@@ -19,6 +19,12 @@ function nowIso(): string {
   return new Date().toISOString()
 }
 
+function validCommission(value: number | undefined): number {
+  const percent = value ?? 0
+  if (!(percent >= 0 && percent <= 100)) throw new Error('A comissão deve estar entre 0% e 100%')
+  return percent
+}
+
 function requireClinicId(): string {
   const id = getCurrentClinicId()
   if (!id) throw new Error('Nenhuma clínica logada')
@@ -146,13 +152,21 @@ export function registerCatalogHandlers(): void {
   registerCrud<typeof professionals.$inferSelect, Professional, ProfessionalInput>({
     prefix: 'professionals',
     table: professionals,
-    toDto: (row) => ({ id: row.id, name: row.name, specialty: row.specialty, color: row.color, active: row.active }),
+    toDto: (row) => ({
+      id: row.id,
+      name: row.name,
+      specialty: row.specialty,
+      color: row.color,
+      commissionPercent: row.commissionPercent,
+      active: row.active
+    }),
     toInsertValues: (id, clinicId, timestamp, input) => ({
       id,
       clinicId,
       name: input.name,
       specialty: input.specialty ?? null,
       color: input.color ?? null,
+      commissionPercent: validCommission(input.commissionPercent),
       active: true,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -163,6 +177,7 @@ export function registerCatalogHandlers(): void {
       name: input.name,
       specialty: input.specialty ?? null,
       color: input.color ?? null,
+      commissionPercent: validCommission(input.commissionPercent),
       updatedAt: timestamp,
       syncStatus: 'pending'
     })

@@ -2558,3 +2558,307 @@ button {
 .section-title {
   margin: 0 0 4px;
 }
+
+/* ============ Fase 1: financeiro, cobrança, despesas, configurações ============ */
+
+.page-head > .subtitle {
+  margin: 0 0 4px;
+  max-width: 640px;
+}
+
+.status-tabs {
+  margin: 0 0 14px;
+}
+
+/* Etiquetas de situação (cobranças, despesas, funcionários) */
+.sale-chip {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.sale-chip.paga {
+  background: rgba(47, 158, 110, 0.2);
+  color: var(--accent);
+}
+
+.sale-chip.pendente {
+  background: rgba(59, 130, 196, 0.18);
+  color: #3b82c4;
+}
+
+.sale-chip.parcial {
+  background: rgba(217, 154, 43, 0.24);
+  color: #b57a12;
+}
+
+.sale-chip.atrasada {
+  background: rgba(220, 80, 70, 0.2);
+  color: var(--danger);
+}
+
+.sale-chip.cancelada {
+  background: rgba(122, 143, 136, 0.22);
+  color: var(--text-muted);
+}
+
+button.sale-chip {
+  margin: 0;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+button.sale-chip:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+/* Parcelas de uma cobrança (linha expandida) */
+.detail-row td {
+  background: var(--glass-strong);
+  padding-top: 8px;
+  padding-bottom: 14px;
+}
+
+.installment-detail {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.installment-detail li {
+  display: grid;
+  grid-template-columns: 110px 110px 130px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.installment-detail li.overdue {
+  color: var(--danger);
+}
+
+.paid-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.parcel-actions .soft-btn {
+  padding: 5px 14px;
+  margin: 0;
+}
+
+.danger-link {
+  color: var(--danger);
+  padding: 4px 0;
+}
+
+/* Navegação por mês (despesas) */
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+
+.month-title {
+  margin: 0;
+  min-width: 170px;
+  text-align: center;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.month-title::first-letter {
+  text-transform: uppercase;
+}
+
+/* Janela de cobrança */
+.charge-modal {
+  max-width: 720px;
+}
+
+.charge-items {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.charge-items li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+}
+
+.charge-item-name {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.charge-item-name small {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.add-item-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.add-item-row label {
+  min-width: 120px;
+}
+
+.add-item-row label.grow {
+  flex: 1;
+  min-width: 180px;
+}
+
+.add-item-row label.narrow {
+  width: 96px;
+  min-width: 96px;
+}
+
+.add-item-row button {
+  margin: 0;
+}
+
+.discount-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.discount-row input {
+  width: 130px;
+}
+
+.charge-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  margin: 4px 0;
+  border-radius: 16px;
+  background: var(--accent-soft);
+}
+
+.charge-summary > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.charge-summary .total {
+  font-size: 18px;
+  padding-top: 6px;
+  border-top: 1px solid var(--row-line);
+}
+
+.installment-list {
+  list-style: none;
+  margin: 8px 0 4px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.installment-list li {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-row.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.modal-actions .soft-btn {
+  margin-top: 0;
+}
+
+/* Horário de trabalho */
+.hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+
+.hours-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 6px 8px;
+}
+
+.hours-table td {
+  padding: 5px 8px;
+}
+
+.hours-table tr.off td:not(:first-child) {
+  opacity: 0.4;
+}
+
+.hours-table input[type='time'] {
+  width: 100%;
+  padding: 7px 8px;
+}
+
+/* Agenda: fora do expediente e bloqueios */
+.tg-off,
+.tg-block {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.tg-off {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--row-line) 6px 7px);
+  opacity: 0.9;
+}
+
+.tg-block {
+  background: repeating-linear-gradient(135deg, rgba(220, 80, 70, 0.1) 0 6px, rgba(220, 80, 70, 0.2) 6px 7px);
+  color: var(--danger);
+}
+
+.popover-sale {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+}

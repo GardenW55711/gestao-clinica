@@ -1,10 +1,11 @@
 import { ipcMain } from 'electron'
 import { randomUUID } from 'crypto'
-import { and, eq, isNull, gte, gt, lt, ne } from 'drizzle-orm'
+import { and, eq, inArray, isNull, gte, gt, lt, ne } from 'drizzle-orm'
 import { getDb } from '../db/client'
-import { appointments, patients, professionals, rooms, procedureTypes } from '../db/schema'
+import { appointments, patients, professionals, rooms, procedureTypes, sales } from '../db/schema'
 import { getCurrentClinicId, getCurrentStaffMemberId } from '../session'
 import { consumeInventoryFefo } from '../inventory/fefo'
+import { checkScheduleAllowed } from './schedule'
 import type { ApiResult, Appointment, AppointmentInput, AppointmentStatus, StockUsageItem } from '@shared/types'
 
 function requireClinicId(): string {
@@ -97,6 +98,9 @@ export function createAppointment(
   })
   if (conflict) throw new Error(conflict)
 
+  const notAllowed = checkScheduleAllowed(input.professionalId, startAt.toISOString(), endAt.toISOString())
+  if (notAllowed) throw new Error(notAllowed)
+
   const id = randomUUID()
   const timestamp = nowIso()
 
@@ -153,8 +157,25 @@ function toAppointmentDto(row: {
     startAt: row.appointments.startAt,
     endAt: row.appointments.endAt,
     status: row.appointments.status as AppointmentStatus,
-    notes: row.appointments.notes
+    notes: row.appointments.notes,
+    saleId: null,
+    saleStatus: null
   }
+}
+
+/** Marca em cada atendimento a cobrança ligada a ele (a que não foi cancelada). */
+function attachSales(list: Appointment[]): Appointment[] {
+  if (list.length === 0) return list
+  const rows = getDb()
+    .select({ id: sales.id, appointmentId: sales.appointmentId, status: sales.status })
+    .from(sales)
+    .where(and(inArray(sales.appointmentId, list.map((a) => a.id)), ne(sales.status, 'cancelada'), isNull(sales.deletedAt)))
+    .all()
+  const byAppointment = new Map(rows.map((r) => [r.appointmentId, r]))
+  return list.map((a) => {
+    const sale = byAppointment.get(a.id)
+    return sale ? { ...a, saleId: sale.id, saleStatus: sale.status } : a
+  })
 }
 
 export function registerAppointmentHandlers(): void {
@@ -171,7 +192,7 @@ export function registerAppointmentHandlers(): void {
         .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
         .where(and(gte(appointments.startAt, start), lt(appointments.startAt, end), isNull(appointments.deletedAt)))
         .all()
-      return { ok: true, data: rows.map(toAppointmentDto) }
+      return { ok: true, data: attachSales(rows.map(toAppointmentDto)) }
     } catch (error) {
       return { ok: false, error: (error as Error).message }
     }
@@ -194,7 +215,7 @@ export function registerAppointmentHandlers(): void {
           .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
           .where(and(gte(appointments.startAt, start), lt(appointments.startAt, end), isNull(appointments.deletedAt)))
           .all()
-        return { ok: true, data: rows.map(toAppointmentDto) }
+        return { ok: true, data: attachSales(rows.map(toAppointmentDto)) }
       } catch (error) {
         return { ok: false, error: (error as Error).message }
       }

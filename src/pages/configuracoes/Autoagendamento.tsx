@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useFeedback } from '../components/Feedback'
+import { useFeedback } from '../../components/Feedback'
 import type { ClinicSettings, ProcedureType } from '@shared/types'
 
 const PUBLIC_BOOKING_BASE_URL = 'https://web-booking-omega.vercel.app/'
 
-export function Configuracoes(): JSX.Element {
+export function Autoagendamento(): JSX.Element {
   const { toast } = useFeedback()
   const [settings, setSettings] = useState<ClinicSettings | null>(null)
   const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([])
@@ -45,9 +45,7 @@ export function Configuracoes(): JSX.Element {
 
   return (
     <div>
-      <h1>Configurações</h1>
-
-      <h2>Autoagendamento pelo paciente</h2>
+      <h2 className="section-title">Autoagendamento pelo paciente</h2>
       <div className="card settings-card">
         <label className="switch-row">
           <input type="checkbox" checked={settings.selfBookingEnabled} onChange={toggleSelfBooking} disabled={busy} />

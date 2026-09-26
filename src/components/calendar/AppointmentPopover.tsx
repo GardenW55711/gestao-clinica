@@ -10,13 +10,14 @@ interface Props {
   onClose: () => void
   onConfirm: () => void
   onFinish: () => void
+  onCharge: () => void
   onNoShow: () => void
   onCancel: () => void
 }
 
 const WIDTH = 340
 
-export function AppointmentPopover({ appt, anchor, color, onClose, onConfirm, onFinish, onNoShow, onCancel }: Props): JSX.Element {
+export function AppointmentPopover({ appt, anchor, color, onClose, onConfirm, onFinish, onCharge, onNoShow, onCancel }: Props): JSX.Element {
   useEscapeKey(onClose)
 
   const start = new Date(appt.startAt)
@@ -76,6 +77,25 @@ export function AppointmentPopover({ appt, anchor, color, onClose, onConfirm, on
             </li>
           )}
         </ul>
+
+        {appt.status === 'completed' && (
+          <div className="popover-actions">
+            {appt.saleId ? (
+              <p className="popover-sale">
+                <Icon name="finance" size={16} />
+                Cobrança:{' '}
+                <strong>
+                  {appt.saleStatus === 'paga' ? 'paga' : appt.saleStatus === 'parcial' ? 'parcialmente paga' : 'pendente'}
+                </strong>
+              </p>
+            ) : (
+              <button type="button" onClick={onCharge}>
+                <Icon name="finance" size={16} />
+                Cobrar atendimento
+              </button>
+            )}
+          </div>
+        )}
 
         {open && (
           <div className="popover-actions">

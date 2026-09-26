@@ -19,6 +19,10 @@ export const clinics = sqliteTable('clinics', {
   cnpj: text('cnpj'),
   ownerEmail: text('owner_email').notNull(),
   selfBookingEnabled: integer('self_booking_enabled', { mode: 'boolean' }).notNull().default(false),
+  // Taxas cobradas pela maquininha (em %), aplicadas ao receber parcelas de cartão.
+  cardFeeDebitPercent: real('card_fee_debit_percent').notNull().default(0),
+  cardFeeCreditPercent: real('card_fee_credit_percent').notNull().default(0),
+  cardFeeCreditInstallmentPercent: real('card_fee_credit_installment_percent').notNull().default(0),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull()
 })
@@ -37,6 +41,7 @@ export const professionals = sqliteTable('professionals', {
   name: text('name').notNull(),
   specialty: text('specialty'),
   color: text('color'),
+  commissionPercent: real('commission_percent').notNull().default(0),
   active: integer('active', { mode: 'boolean' }).notNull().default(true)
 })
 
@@ -125,15 +130,82 @@ export const inventoryMovements = sqliteTable('inventory_movements', {
   createdBy: text('created_by')
 })
 
+export const PAYMENT_METHODS = ['dinheiro', 'pix', 'cartao_debito', 'cartao_credito', 'boleto', 'outro'] as const
+
+// Cobrança: total_amount_cents = valor final (bruto - desconto). O status é
+// derivado das parcelas (pendente/parcial/paga), exceto "cancelada".
 export const sales = sqliteTable('sales', {
   ...tenantColumns,
   patientId: text('patient_id').notNull(),
   appointmentId: text('appointment_id'),
   professionalId: text('professional_id'),
+  grossAmountCents: integer('gross_amount_cents').notNull().default(0),
+  discountCents: integer('discount_cents').notNull().default(0),
   totalAmountCents: integer('total_amount_cents').notNull().default(0),
-  paymentMethod: text('payment_method', { enum: ['dinheiro', 'cartao', 'pix', 'outro'] }).notNull(),
-  status: text('status', { enum: ['paga', 'pendente'] }).notNull().default('paga'),
+  paymentMethod: text('payment_method', { enum: PAYMENT_METHODS }).notNull(),
+  status: text('status', { enum: ['pendente', 'parcial', 'paga', 'cancelada'] })
+    .notNull()
+    .default('pendente'),
   createdBy: text('created_by')
+})
+
+// Parcelas de uma cobrança: à vista = 1 parcela. A taxa do cartão é gravada no
+// momento do recebimento (fee_cents), então mudar a taxa depois não altera o passado.
+export const installments = sqliteTable('installments', {
+  ...tenantColumns,
+  saleId: text('sale_id').notNull(),
+  number: integer('number').notNull(),
+  totalInstallments: integer('total_installments').notNull().default(1),
+  amountCents: integer('amount_cents').notNull(),
+  dueDate: text('due_date').notNull(), // AAAA-MM-DD
+  paidAt: text('paid_at'), // ISO; nulo = ainda não recebida
+  paymentMethod: text('payment_method', { enum: PAYMENT_METHODS }).notNull(),
+  feeCents: integer('fee_cents').notNull().default(0)
+})
+
+export const EXPENSE_CATEGORIES = [
+  'aluguel',
+  'salarios',
+  'pro_labore',
+  'contas',
+  'laboratorio',
+  'materiais',
+  'marketing',
+  'impostos',
+  'manutencao',
+  'outros'
+] as const
+
+export const expenses = sqliteTable('expenses', {
+  ...tenantColumns,
+  description: text('description').notNull(),
+  category: text('category', { enum: EXPENSE_CATEGORIES }).notNull(),
+  kind: text('kind', { enum: ['fixa', 'variavel'] }).notNull(),
+  amountCents: integer('amount_cents').notNull(),
+  dueDate: text('due_date').notNull(), // AAAA-MM-DD
+  paidAt: text('paid_at'), // ISO; nulo = ainda não paga
+  recurringMonthly: integer('recurring_monthly', { mode: 'boolean' }).notNull().default(false),
+  recurrenceGroupId: text('recurrence_group_id') // une as cópias mensais de uma mesma despesa
+})
+
+// Dias e horário de trabalho de cada profissional (uma linha por dia trabalhado).
+export const professionalWorkingHours = sqliteTable('professional_working_hours', {
+  ...tenantColumns,
+  professionalId: text('professional_id').notNull(),
+  weekday: integer('weekday').notNull(), // 0 = domingo ... 6 = sábado
+  startTime: text('start_time').notNull(), // HH:MM
+  endTime: text('end_time').notNull(),
+  breakStart: text('break_start'),
+  breakEnd: text('break_end')
+})
+
+// Bloqueios da agenda (férias, feriado, almoço, curso). professional_id nulo = todos.
+export const scheduleBlocks = sqliteTable('schedule_blocks', {
+  ...tenantColumns,
+  professionalId: text('professional_id'),
+  startAt: text('start_at').notNull(),
+  endAt: text('end_at').notNull(),
+  reason: text('reason')
 })
 
 export const saleItems = sqliteTable('sale_items', {

@@ -64,6 +64,7 @@ export interface Professional {
   name: string
   specialty: string | null
   color: string | null
+  commissionPercent: number
   active: boolean
 }
 
@@ -71,6 +72,7 @@ export interface ProfessionalInput {
   name: string
   specialty?: string
   color?: string
+  commissionPercent?: number
 }
 
 export interface Room {
@@ -127,6 +129,9 @@ export interface Appointment {
   endAt: string
   status: AppointmentStatus
   notes: string | null
+  /** Cobrança ligada a este atendimento (se já existir). */
+  saleId: string | null
+  saleStatus: SaleStatus | null
 }
 
 export interface AppointmentInput {
@@ -184,7 +189,17 @@ export interface InventoryBatchAlert {
   status: 'expired' | 'expiring_soon'
 }
 
-export type PaymentMethod = 'dinheiro' | 'cartao' | 'pix' | 'outro'
+export type PaymentMethod = 'dinheiro' | 'pix' | 'cartao_debito' | 'cartao_credito' | 'boleto' | 'outro'
+export type SaleStatus = 'pendente' | 'parcial' | 'paga' | 'cancelada'
+
+export const PAYMENT_LABELS: Record<PaymentMethod, string> = {
+  dinheiro: 'Dinheiro',
+  pix: 'Pix',
+  cartao_debito: 'Cartão de débito',
+  cartao_credito: 'Cartão de crédito',
+  boleto: 'Boleto',
+  outro: 'Outro'
+}
 
 export interface SaleItemInput {
   kind: 'procedimento' | 'produto'
@@ -195,10 +210,20 @@ export interface SaleItemInput {
   unitPriceCents: number
 }
 
+export interface InstallmentInput {
+  amountCents: number
+  dueDate: string // AAAA-MM-DD
+  paid: boolean // já recebida agora?
+}
+
 export interface SaleInput {
   patientId: string
-  paymentMethod: PaymentMethod
+  appointmentId?: string
+  professionalId?: string
   items: SaleItemInput[]
+  discountCents: number
+  paymentMethod: PaymentMethod
+  installments: InstallmentInput[] // a soma tem de fechar com o total (bruto - desconto)
 }
 
 export interface SaleItem {
@@ -223,21 +248,152 @@ export interface FinancialSummary {
   byProcedureType: { name: string; totalCents: number }[]
 }
 
+export interface Installment {
+  id: string
+  saleId: string
+  number: number
+  totalInstallments: number
+  amountCents: number
+  dueDate: string
+  paidAt: string | null
+  paymentMethod: PaymentMethod
+  feeCents: number
+  overdue: boolean
+}
+
 export interface Sale {
   id: string
   patientId: string
   patientName: string
+  appointmentId: string | null
+  professionalId: string | null
+  professionalName: string | null
+  grossAmountCents: number
+  discountCents: number
   totalAmountCents: number
-  paymentMethod: PaymentMethod
-  status: 'paga' | 'pendente'
+  paidCents: number
+  status: SaleStatus
   createdAt: string
   items: SaleItem[]
+  installments: Installment[]
+}
+
+export interface SaleFilter {
+  status?: SaleStatus | 'atrasada'
+  patientId?: string
+  from?: string // ISO
+  to?: string // ISO
+}
+
+export interface ReceiveInstallmentInput {
+  installmentId: string
+  paymentMethod: PaymentMethod
+  paidAt?: string // ISO; padrão = agora
+}
+
+export type ExpenseCategory =
+  | 'aluguel'
+  | 'salarios'
+  | 'pro_labore'
+  | 'contas'
+  | 'laboratorio'
+  | 'materiais'
+  | 'marketing'
+  | 'impostos'
+  | 'manutencao'
+  | 'outros'
+
+export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  aluguel: 'Aluguel',
+  salarios: 'Salários',
+  pro_labore: 'Pró-labore',
+  contas: 'Contas (luz, água, internet)',
+  laboratorio: 'Laboratório de prótese',
+  materiais: 'Materiais (compras)',
+  marketing: 'Marketing',
+  impostos: 'Impostos',
+  manutencao: 'Manutenção',
+  outros: 'Outros'
+}
+
+export interface Expense {
+  id: string
+  description: string
+  category: ExpenseCategory
+  kind: 'fixa' | 'variavel'
+  amountCents: number
+  dueDate: string
+  paidAt: string | null
+  recurringMonthly: boolean
+  overdue: boolean
+}
+
+export interface ExpenseInput {
+  description: string
+  category: ExpenseCategory
+  kind: 'fixa' | 'variavel'
+  amountCents: number
+  dueDate: string
+  paid: boolean
+  recurringMonthly: boolean
+}
+
+export interface WorkingHoursDay {
+  weekday: number // 0 = domingo ... 6 = sábado
+  startTime: string // HH:MM
+  endTime: string
+  breakStart: string | null
+  breakEnd: string | null
+}
+
+export interface ProfessionalWorkingHours {
+  professionalId: string
+  days: WorkingHoursDay[] // só os dias trabalhados
+}
+
+export interface ScheduleBlock {
+  id: string
+  professionalId: string | null // nulo = todos
+  professionalName: string | null
+  startAt: string
+  endAt: string
+  reason: string | null
+}
+
+export interface ScheduleBlockInput {
+  professionalId: string | null
+  startAt: string
+  endAt: string
+  reason?: string
+}
+
+export interface StaffMember {
+  id: string
+  name: string
+  role: StaffRole
+  active: boolean
+  professionalId: string | null
+}
+
+export interface StaffInput {
+  name: string
+  role: StaffRole
+  pin?: string // obrigatório ao criar; opcional ao editar (só troca se informado)
+  active?: boolean
+  professionalId?: string | null
+}
+
+export interface CardFees {
+  debitPercent: number
+  creditPercent: number
+  creditInstallmentPercent: number
 }
 
 export interface ClinicSettings {
   clinicId: string
   clinicName: string
   selfBookingEnabled: boolean
+  cardFees: CardFees
 }
 
 export interface BookingRequestSummary {

@@ -411,3 +411,127 @@ alter table public.inventory_items add column if not exists unit_cost_cents bigi
 alter table public.sales add column if not exists total_amount_cents bigint;
 alter table public.sale_items add column if not exists unit_price_cents bigint;
 alter table public.sale_items add column if not exists subtotal_cents bigint;
+
+-- ============================================================
+-- Fase 1 / Etapa B: financeiro de verdade (parcelas, despesas), comissão,
+-- taxas de cartão, horário de trabalho e bloqueios da agenda.
+-- ============================================================
+
+-- Cobranças: valor bruto, desconto e novos status / formas de pagamento
+alter table public.sales add column if not exists gross_amount_cents bigint;
+alter table public.sales add column if not exists discount_cents bigint;
+update public.sales set payment_method = 'cartao_credito' where payment_method = 'cartao';
+alter table public.sales drop constraint if exists sales_payment_method_check;
+alter table public.sales add constraint sales_payment_method_check
+  check (payment_method in ('dinheiro','pix','cartao_debito','cartao_credito','boleto','outro'));
+alter table public.sales drop constraint if exists sales_status_check;
+alter table public.sales add constraint sales_status_check
+  check (status in ('pendente','parcial','paga','cancelada'));
+
+-- Comissão por profissional e taxas de cartão da clínica
+alter table public.professionals add column if not exists commission_percent numeric not null default 0;
+alter table public.clinics add column if not exists card_fee_debit_percent numeric not null default 0;
+alter table public.clinics add column if not exists card_fee_credit_percent numeric not null default 0;
+alter table public.clinics add column if not exists card_fee_credit_installment_percent numeric not null default 0;
+
+-- Parcelas das cobranças
+create table if not exists public.installments (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  sale_id uuid not null,
+  number integer not null,
+  total_installments integer not null default 1,
+  amount_cents bigint not null,
+  due_date date not null,
+  paid_at timestamptz,
+  payment_method text not null check (payment_method in ('dinheiro','pix','cartao_debito','cartao_credito','boleto','outro')),
+  fee_cents bigint not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.installments enable row level security;
+drop policy if exists "clinic manages its installments" on public.installments;
+create policy "clinic manages its installments"
+  on public.installments for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Despesas
+create table if not exists public.expenses (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  description text not null,
+  category text not null check (category in ('aluguel','salarios','pro_labore','contas','laboratorio','materiais','marketing','impostos','manutencao','outros')),
+  kind text not null check (kind in ('fixa','variavel')),
+  amount_cents bigint not null,
+  due_date date not null,
+  paid_at timestamptz,
+  recurring_monthly boolean not null default false,
+  recurrence_group_id uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.expenses enable row level security;
+drop policy if exists "clinic manages its expenses" on public.expenses;
+create policy "clinic manages its expenses"
+  on public.expenses for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Horário de trabalho por profissional
+create table if not exists public.professional_working_hours (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  professional_id uuid not null,
+  weekday integer not null check (weekday between 0 and 6),
+  start_time text not null,
+  end_time text not null,
+  break_start text,
+  break_end text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.professional_working_hours enable row level security;
+drop policy if exists "clinic manages its working hours" on public.professional_working_hours;
+create policy "clinic manages its working hours"
+  on public.professional_working_hours for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Bloqueios da agenda (professional_id nulo = vale para todos)
+create table if not exists public.schedule_blocks (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  professional_id uuid,
+  start_at timestamptz not null,
+  end_at timestamptz not null,
+  reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.schedule_blocks enable row level security;
+drop policy if exists "clinic manages its schedule blocks" on public.schedule_blocks;
+create policy "clinic manages its schedule blocks"
+  on public.schedule_blocks for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- Para a página pública de agendamento respeitar horário de trabalho e bloqueios
+-- (sem expor o motivo do bloqueio).
+create or replace view public.public_working_hours as
+select clinic_id, professional_id, weekday, start_time, end_time, break_start, break_end
+from public.professional_working_hours
+where deleted_at is null
+  and clinic_id in (select id from public.clinics where self_booking_enabled = true);
+grant select on public.public_working_hours to anon;
+
+create or replace view public.public_schedule_blocks as
+select clinic_id, professional_id, start_at, end_at
+from public.schedule_blocks
+where deleted_at is null
+  and clinic_id in (select id from public.clinics where self_booking_enabled = true);
+grant select on public.public_schedule_blocks to anon;

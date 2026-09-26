@@ -20,6 +20,7 @@ export interface ColumnConfig<Dto> {
 interface CrudApiLike<Dto, Input> {
   list: () => Promise<ApiResult<Dto[]>>
   create: (input: Input) => Promise<ApiResult<Dto>>
+  update?: (id: string, input: Input) => Promise<ApiResult<Dto>>
   remove: (id: string) => Promise<ApiResult<null>>
 }
 
@@ -33,6 +34,8 @@ interface Props<Dto extends { id: string }, Input extends object> {
   columns: ColumnConfig<Dto>[]
   api: CrudApiLike<Dto, Input>
   emptyInput: Input
+  /** Se informado, cada linha ganha um botão Editar que carrega os dados no formulário. */
+  toInput?: (dto: Dto) => Input
 }
 
 export function CrudPage<Dto extends { id: string }, Input extends object>({
@@ -43,7 +46,8 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
   fields,
   columns,
   api,
-  emptyInput
+  emptyInput,
+  toInput
 }: Props<Dto, Input>): JSX.Element {
   const { toast, confirm } = useFeedback()
   const [items, setItems] = useState<Dto[]>([])
@@ -52,6 +56,7 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [formKey, setFormKey] = useState(0)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   async function load(): Promise<void> {
     const result = await api.list()
@@ -68,15 +73,16 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const result = await api.create(form)
+    const result = editingId && api.update ? await api.update(editingId, form) : await api.create(form)
     setLoading(false)
     if (!result.ok) {
       setError(result.error ?? 'Não foi possível salvar')
       return
     }
     setForm(emptyInput)
+    setEditingId(null)
     setFormKey((k) => k + 1)
-    toast.success('Salvo com sucesso')
+    toast.success(editingId ? 'Alterações salvas' : 'Salvo com sucesso')
     load()
   }
 
@@ -91,6 +97,20 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
     await api.remove(id)
     toast.info('Removido')
     load()
+  }
+
+  function startEdit(item: Dto): void {
+    if (!toInput) return
+    setForm(toInput(item))
+    setEditingId(item.id)
+    setError(null)
+    setFormKey((k) => k + 1)
+  }
+
+  function cancelEdit(): void {
+    setForm(emptyInput)
+    setEditingId(null)
+    setFormKey((k) => k + 1)
   }
 
   function updateField(key: keyof Input, value: unknown): void {
@@ -127,6 +147,7 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
             ) : (
               <input
                 type={field.type}
+                step={field.type === 'number' ? 'any' : undefined}
                 autoFocus={index === 0}
                 autoComplete="off"
                 value={(form[field.key] as string | number | undefined) ?? ''}
@@ -139,8 +160,13 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
           </label>
         ))}
         <button type="submit" disabled={loading}>
-          {loading ? 'Salvando...' : 'Adicionar'}
+          {loading ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Adicionar'}
         </button>
+        {editingId && (
+          <button type="button" className="soft-btn" onClick={cancelEdit}>
+            Cancelar
+          </button>
+        )}
       </form>
 
       {error && <p className="error">{error}</p>}
@@ -170,6 +196,11 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
                   <td key={String(c.key)}>{c.render ? c.render(item) : String(item[c.key] ?? '')}</td>
                 ))}
                 <td className="row-actions">
+                  {toInput && api.update && (
+                    <button type="button" className="link-button" onClick={() => startEdit(item)}>
+                      Editar
+                    </button>
+                  )}
                   <button type="button" className="link-button" onClick={() => handleRemove(item.id)}>
                     Remover
                   </button>

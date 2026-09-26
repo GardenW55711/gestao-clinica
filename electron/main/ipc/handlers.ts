@@ -181,7 +181,7 @@ export function registerIpcHandlers(): void {
         if (!valid) throw new Error('PIN incorreto')
 
         writeAudit(staff.clinicId, staff.id, 'staff_login', 'staff_members')
-        setCurrentStaffMember(staff.id)
+        setCurrentStaffMember(staff.id, staff.role)
 
         return { ok: true, data: { id: staff.id, name: staff.name, role: staff.role } }
       } catch (error) {

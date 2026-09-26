@@ -5,7 +5,8 @@ import { getDb } from '../db/client'
 import { clinics, procedureTypes, professionals, patients, bookingRequests } from '../db/schema'
 import { getCurrentClinicId } from '../session'
 import { createAppointment } from './appointments'
-import type { ApiResult, ClinicSettings, BookingRequestSummary } from '@shared/types'
+import { MANAGERS, handle } from './util'
+import type { ApiResult, CardFees, ClinicSettings, BookingRequestSummary } from '@shared/types'
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -25,11 +26,37 @@ export function registerBookingHandlers(): void {
       if (!clinic) throw new Error('Clínica não encontrada')
       return {
         ok: true,
-        data: { clinicId: clinic.id, clinicName: clinic.name, selfBookingEnabled: clinic.selfBookingEnabled }
+        data: {
+          clinicId: clinic.id,
+          clinicName: clinic.name,
+          selfBookingEnabled: clinic.selfBookingEnabled,
+          cardFees: {
+            debitPercent: clinic.cardFeeDebitPercent,
+            creditPercent: clinic.cardFeeCreditPercent,
+            creditInstallmentPercent: clinic.cardFeeCreditInstallmentPercent
+          }
+        }
       }
     } catch (error) {
       return { ok: false, error: (error as Error).message }
     }
+  })
+
+  // Taxas da maquininha (em %): valem para os recebimentos feitos daqui em diante.
+  handle('clinic:setCardFees', MANAGERS, (fees: CardFees): null => {
+    for (const value of [fees.debitPercent, fees.creditPercent, fees.creditInstallmentPercent]) {
+      if (!(value >= 0 && value <= 100)) throw new Error('As taxas devem estar entre 0% e 100%')
+    }
+    getDb()
+      .update(clinics)
+      .set({
+        cardFeeDebitPercent: fees.debitPercent,
+        cardFeeCreditPercent: fees.creditPercent,
+        cardFeeCreditInstallmentPercent: fees.creditInstallmentPercent,
+        updatedAt: nowIso()
+      })
+      .run()
+    return null
   })
 
   ipcMain.handle('clinic:setSelfBooking', (_e, enabled: boolean): ApiResult<null> => {

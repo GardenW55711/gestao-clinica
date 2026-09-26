@@ -16,8 +16,14 @@ import {
   sales,
   saleItems,
   bookingRequests,
-  procedureTypeItems
+  procedureTypeItems,
+  installments,
+  expenses,
+  professionalWorkingHours,
+  scheduleBlocks
 } from '../db/schema'
+import { eq, isNull } from 'drizzle-orm'
+import { randomUUID } from 'crypto'
 
 /**
  * Baixa da nuvem TODAS as linhas de uma tabela pra dentro do banco local —
@@ -87,6 +93,9 @@ export async function recoverClinicFromCloud(params: {
         cnpj: cloudClinic.cnpj,
         ownerEmail: cloudClinic.owner_email,
         selfBookingEnabled: cloudClinic.self_booking_enabled,
+        cardFeeDebitPercent: Number(cloudClinic.card_fee_debit_percent ?? 0),
+        cardFeeCreditPercent: Number(cloudClinic.card_fee_credit_percent ?? 0),
+        cardFeeCreditInstallmentPercent: Number(cloudClinic.card_fee_credit_installment_percent ?? 0),
         createdAt: cloudClinic.created_at,
         updatedAt: cloudClinic.updated_at
       })
@@ -128,6 +137,7 @@ export async function recoverClinicFromCloud(params: {
       name: r.name,
       specialty: r.specialty,
       color: r.color,
+      commissionPercent: Number(r.commission_percent ?? 0),
       active: r.active,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -231,8 +241,10 @@ export async function recoverClinicFromCloud(params: {
       patientId: r.patient_id,
       appointmentId: r.appointment_id,
       professionalId: r.professional_id,
+      grossAmountCents: centsFrom(r.gross_amount_cents ?? r.total_amount_cents, r.total_amount),
+      discountCents: typeof r.discount_cents === 'number' ? r.discount_cents : 0,
       totalAmountCents: centsFrom(r.total_amount_cents, r.total_amount),
-      paymentMethod: r.payment_method,
+      paymentMethod: r.payment_method === 'cartao' ? 'cartao_credito' : r.payment_method,
       status: r.status,
       createdBy: r.created_by,
       createdAt: r.created_at,
@@ -289,6 +301,121 @@ export async function recoverClinicFromCloud(params: {
       }))
     } catch (error) {
       console.warn('[recover] produtos do procedimento não recuperados:', (error as Error).message)
+    }
+
+    // Tabelas da Fase 1 (parcelas, despesas, horários e bloqueios): se a nuvem ainda
+    // não as tem, a recuperação segue sem elas.
+    const optional: [string, SQLiteTable, string, (r: Record<string, unknown>) => Record<string, unknown>][] = [
+      [
+        'installments',
+        installments,
+        'installments',
+        (r) => ({
+          id: r.id,
+          clinicId: r.clinic_id,
+          saleId: r.sale_id,
+          number: r.number,
+          totalInstallments: r.total_installments,
+          amountCents: r.amount_cents,
+          dueDate: r.due_date,
+          paidAt: r.paid_at,
+          paymentMethod: r.payment_method,
+          feeCents: r.fee_cents ?? 0,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          syncStatus: 'synced',
+          deletedAt: r.deleted_at
+        })
+      ],
+      [
+        'expenses',
+        expenses,
+        'expenses',
+        (r) => ({
+          id: r.id,
+          clinicId: r.clinic_id,
+          description: r.description,
+          category: r.category,
+          kind: r.kind,
+          amountCents: r.amount_cents,
+          dueDate: r.due_date,
+          paidAt: r.paid_at,
+          recurringMonthly: r.recurring_monthly,
+          recurrenceGroupId: r.recurrence_group_id,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          syncStatus: 'synced',
+          deletedAt: r.deleted_at
+        })
+      ],
+      [
+        'professional_working_hours',
+        professionalWorkingHours,
+        'professional_working_hours',
+        (r) => ({
+          id: r.id,
+          clinicId: r.clinic_id,
+          professionalId: r.professional_id,
+          weekday: r.weekday,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          breakStart: r.break_start,
+          breakEnd: r.break_end,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          syncStatus: 'synced',
+          deletedAt: r.deleted_at
+        })
+      ],
+      [
+        'schedule_blocks',
+        scheduleBlocks,
+        'schedule_blocks',
+        (r) => ({
+          id: r.id,
+          clinicId: r.clinic_id,
+          professionalId: r.professional_id,
+          startAt: r.start_at,
+          endAt: r.end_at,
+          reason: r.reason,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          syncStatus: 'synced',
+          deletedAt: r.deleted_at
+        })
+      ]
+    ]
+    for (const [label, table, remoteName, mapRow] of optional) {
+      try {
+        await pullAllRows(supabase, cloudClinic.id, table, remoteName, mapRow)
+      } catch (error) {
+        console.warn('[recover] ' + label + ' não recuperada:', (error as Error).message)
+      }
+    }
+
+    // Cobranças vindas de uma nuvem antiga não têm parcelas: cria 1 parcela para cada.
+    const orphanSales = db.select().from(sales).where(isNull(sales.deletedAt)).all()
+    for (const sale of orphanSales) {
+      const has = db.select({ id: installments.id }).from(installments).where(eq(installments.saleId, sale.id)).get()
+      if (has) continue
+      db.insert(installments)
+        .values({
+          id: randomUUID(),
+          clinicId: sale.clinicId,
+          saleId: sale.id,
+          number: 1,
+          totalInstallments: 1,
+          amountCents: sale.totalAmountCents,
+          dueDate: sale.createdAt.slice(0, 10),
+          paidAt: sale.status === 'paga' ? sale.createdAt : null,
+          paymentMethod: sale.paymentMethod,
+          feeCents: 0,
+          createdAt: sale.createdAt,
+          updatedAt: sale.updatedAt,
+          syncStatus: 'pending',
+          deletedAt: null
+        })
+        .run()
     }
 
     return { clinicId: cloudClinic.id }

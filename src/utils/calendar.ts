@@ -1,4 +1,4 @@
-import type { Appointment, AppointmentStatus, Professional } from '@shared/types'
+import type { Appointment, AppointmentStatus, Professional, ProfessionalWorkingHours, ScheduleBlock } from '@shared/types'
 
 export type CalendarView = 'day' | 'week' | 'month'
 
@@ -135,4 +135,64 @@ export function savePref(key: string, value: unknown): void {
   } catch {
     // preferência só vale nesta sessão
   }
+}
+
+// ---------- horário de trabalho e bloqueios ----------
+
+/** Faixa do dia (em minutos) em que não dá para agendar: fora do expediente ou bloqueada. */
+export interface Unavailable {
+  startMin: number
+  endMin: number
+  kind: 'off' | 'block'
+  label?: string
+}
+
+/**
+ * Faixas indisponíveis de uma coluna da agenda. `professionalIds` são os
+ * profissionais que a coluna representa: com um só, valem o horário de trabalho
+ * e os bloqueios dele; com vários, só bloqueios que valem para todos.
+ */
+export function unavailableRanges(params: {
+  dateStr: string
+  professionalIds: string[]
+  hours: ProfessionalWorkingHours[]
+  blocks: ScheduleBlock[]
+}): Unavailable[] {
+  const { dateStr, professionalIds, hours, blocks } = params
+  const date = fromDateStr(dateStr)
+  const dayStart = date.getTime()
+  const dayEnd = addDays(date, 1).getTime()
+  const single = professionalIds.length === 1 ? professionalIds[0] : null
+  const result: Unavailable[] = []
+
+  const toMin = (t: string): number => {
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
+
+  const mine = single ? hours.find((h) => h.professionalId === single) : undefined
+  if (mine && mine.days.length > 0) {
+    const day = mine.days.find((d) => d.weekday === date.getDay())
+    if (!day) {
+      result.push({ startMin: 0, endMin: 24 * 60, kind: 'off', label: 'Não atende' })
+    } else {
+      result.push({ startMin: 0, endMin: toMin(day.startTime), kind: 'off' })
+      result.push({ startMin: toMin(day.endTime), endMin: 24 * 60, kind: 'off' })
+      if (day.breakStart && day.breakEnd) {
+        result.push({ startMin: toMin(day.breakStart), endMin: toMin(day.breakEnd), kind: 'off', label: 'Intervalo' })
+      }
+    }
+  }
+
+  for (const b of blocks) {
+    const applies = b.professionalId === null || (single !== null && b.professionalId === single)
+    if (!applies) continue
+    const s = new Date(b.startAt).getTime()
+    const e = new Date(b.endAt).getTime()
+    if (e <= dayStart || s >= dayEnd) continue
+    const startMin = s <= dayStart ? 0 : minutesOfDay(new Date(s))
+    const endMin = e >= dayEnd ? 24 * 60 : minutesOfDay(new Date(e))
+    result.push({ startMin, endMin, kind: 'block', label: b.reason ?? 'Bloqueado' })
+  }
+  return result
 }

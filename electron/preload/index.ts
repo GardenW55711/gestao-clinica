@@ -28,8 +28,18 @@ import type {
   FinancialSummary,
   FinancialSeriesPoint,
   ClinicSettings,
+  CardFees,
   BookingRequestSummary,
-  StockUsageItem
+  StockUsageItem,
+  SaleFilter,
+  ReceiveInstallmentInput,
+  Expense,
+  ExpenseInput,
+  ProfessionalWorkingHours,
+  ScheduleBlock,
+  ScheduleBlockInput,
+  StaffMember,
+  StaffInput
 } from '@shared/types'
 
 function crudApi<Dto, Input>(prefix: string): {
@@ -97,15 +107,46 @@ const api = {
     expiringSoon: (): Promise<ApiResult<InventoryBatchAlert[]>> => ipcRenderer.invoke('inventory:batches:expiringSoon')
   },
   sales: {
-    list: (): Promise<ApiResult<Sale[]>> => ipcRenderer.invoke('sales:list'),
-    create: (input: SaleInput): Promise<ApiResult<null>> => ipcRenderer.invoke('sales:create', input),
+    list: (filter?: SaleFilter): Promise<ApiResult<Sale[]>> => ipcRenderer.invoke('sales:list', filter),
+    create: (input: SaleInput): Promise<ApiResult<string>> => ipcRenderer.invoke('sales:create', input),
+    receive: (input: ReceiveInstallmentInput): Promise<ApiResult<null>> => ipcRenderer.invoke('sales:receive', input),
+    undoReceive: (installmentId: string): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('sales:undoReceive', installmentId),
+    cancel: (saleId: string): Promise<ApiResult<null>> => ipcRenderer.invoke('sales:cancel', saleId),
     financialSummary: (from: string, to: string): Promise<ApiResult<FinancialSummary>> =>
       ipcRenderer.invoke('sales:financialSummary', { from, to }),
     financialSeries: (from: string, to: string, granularity: 'day' | 'month'): Promise<ApiResult<FinancialSeriesPoint[]>> =>
       ipcRenderer.invoke('sales:financialSeries', { from, to, granularity })
   },
+  expenses: {
+    list: (from: string, to: string): Promise<ApiResult<Expense[]>> => ipcRenderer.invoke('expenses:list', { from, to }),
+    create: (input: ExpenseInput): Promise<ApiResult<Expense>> => ipcRenderer.invoke('expenses:create', input),
+    update: (id: string, input: ExpenseInput): Promise<ApiResult<Expense>> =>
+      ipcRenderer.invoke('expenses:update', { id, input }),
+    setPaid: (id: string, paid: boolean): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('expenses:setPaid', { id, paid }),
+    remove: (id: string, stopRecurrence: boolean): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('expenses:remove', { id, stopRecurrence })
+  },
+  workingHours: {
+    listAll: (): Promise<ApiResult<ProfessionalWorkingHours[]>> => ipcRenderer.invoke('workingHours:listAll'),
+    set: (input: ProfessionalWorkingHours): Promise<ApiResult<null>> => ipcRenderer.invoke('workingHours:set', input)
+  },
+  scheduleBlocks: {
+    list: (from?: string, to?: string): Promise<ApiResult<ScheduleBlock[]>> =>
+      ipcRenderer.invoke('scheduleBlocks:list', from && to ? { from, to } : undefined),
+    create: (input: ScheduleBlockInput): Promise<ApiResult<string>> => ipcRenderer.invoke('scheduleBlocks:create', input),
+    remove: (id: string): Promise<ApiResult<null>> => ipcRenderer.invoke('scheduleBlocks:remove', id)
+  },
+  staff: {
+    list: (): Promise<ApiResult<StaffMember[]>> => ipcRenderer.invoke('staff:list'),
+    create: (input: StaffInput): Promise<ApiResult<StaffMember>> => ipcRenderer.invoke('staff:create', input),
+    update: (id: string, input: StaffInput): Promise<ApiResult<StaffMember>> =>
+      ipcRenderer.invoke('staff:update', { id, input })
+  },
   clinicSettings: {
     get: (): Promise<ApiResult<ClinicSettings>> => ipcRenderer.invoke('clinic:getSettings'),
+    setCardFees: (fees: CardFees): Promise<ApiResult<null>> => ipcRenderer.invoke('clinic:setCardFees', fees),
     setSelfBooking: (enabled: boolean): Promise<ApiResult<null>> =>
       ipcRenderer.invoke('clinic:setSelfBooking', enabled)
   },

@@ -16,9 +16,15 @@ import { Estoque } from './pages/Estoque'
 import { FinanceiroLayout } from './pages/financeiro/FinanceiroLayout'
 import { FinanceiroOverview } from './pages/financeiro/FinanceiroOverview'
 import { FinanceiroRecebimentos } from './pages/financeiro/FinanceiroRecebimentos'
+import { FinanceiroDespesas } from './pages/financeiro/FinanceiroDespesas'
 import { CadastrosLayout } from './pages/cadastros/CadastrosLayout'
 import { ThemeToggle } from './components/ThemeToggle'
-import { Configuracoes } from './pages/Configuracoes'
+import { ConfiguracoesLayout } from './pages/configuracoes/ConfiguracoesLayout'
+import { Autoagendamento } from './pages/configuracoes/Autoagendamento'
+import { Horarios } from './pages/configuracoes/Horarios'
+import { Bloqueios } from './pages/configuracoes/Bloqueios'
+import { Taxas } from './pages/configuracoes/Taxas'
+import { Funcionarios } from './pages/configuracoes/Funcionarios'
 import { ClinicContext } from './context/ClinicContext'
 import type { ClinicLoginResult, StaffSummary } from '@shared/types'
 
@@ -99,13 +105,20 @@ function App(): JSX.Element {
             <Route path="/financeiro" element={<FinanceiroLayout />}>
               <Route index element={<FinanceiroOverview />} />
               <Route path="recebimentos" element={<FinanceiroRecebimentos />} />
+              <Route path="despesas" element={<FinanceiroDespesas />} />
             </Route>
             {/* Endereços antigos continuam funcionando */}
             <Route path="/vendas" element={<Navigate to="/financeiro" replace />} />
             <Route path="/professionals" element={<Navigate to="/cadastros/profissionais" replace />} />
             <Route path="/rooms" element={<Navigate to="/cadastros/salas" replace />} />
             <Route path="/procedure-types" element={<Navigate to="/cadastros/procedimentos" replace />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/configuracoes" element={<ConfiguracoesLayout />}>
+              <Route index element={<Autoagendamento />} />
+              <Route path="horarios" element={<Horarios />} />
+              <Route path="bloqueios" element={<Bloqueios />} />
+              <Route path="taxas" element={<Taxas />} />
+              <Route path="funcionarios" element={<Funcionarios />} />
+            </Route>
           </Route>
         </Routes>
       </HashRouter>

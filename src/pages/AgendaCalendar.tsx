@@ -3,6 +3,7 @@ import { useFeedback } from '../components/Feedback'
 import { Icon } from '../components/Icons'
 import { NewAppointmentForm } from '../components/NewAppointmentForm'
 import { CompleteAppointmentModal } from '../components/CompleteAppointmentModal'
+import { ChargeModal } from '../components/ChargeModal'
 import { TimeGrid, type GridColumn } from '../components/calendar/TimeGrid'
 import { MonthGrid } from '../components/calendar/MonthGrid'
 import { AppointmentPopover } from '../components/calendar/AppointmentPopover'
@@ -21,7 +22,9 @@ import {
   savePref,
   startOfWeek,
   toDateStr,
-  type CalendarView
+  unavailableRanges,
+  type CalendarView,
+  type Unavailable
 } from '../utils/calendar'
 import type {
   Appointment,
@@ -30,7 +33,9 @@ import type {
   Patient,
   Professional,
   ProcedureType,
+  ProfessionalWorkingHours,
   Room,
+  ScheduleBlock,
   StockUsageItem
 } from '@shared/types'
 
@@ -82,6 +87,9 @@ export function AgendaCalendar(): JSX.Element {
   const [formSlot, setFormSlot] = useState<{ date: string; professionalId: string; time: string } | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [completing, setCompleting] = useState<Appointment | null>(null)
+  const [charging, setCharging] = useState<Appointment | null>(null)
+  const [hours, setHours] = useState<ProfessionalWorkingHours[]>([])
+  const [blocks, setBlocks] = useState<ScheduleBlock[]>([])
   const [loaded, setLoaded] = useState(false)
   const requestId = useRef(0)
 
@@ -91,9 +99,15 @@ export function AgendaCalendar(): JSX.Element {
   const load = useCallback(async (): Promise<void> => {
     const { from, to } = rangeFor(view, cursor)
     const id = ++requestId.current
-    const result = await window.api.appointments.listRange(toDateStr(from), toDateStr(to))
+    const [result, hoursResult, blocksResult] = await Promise.all([
+      window.api.appointments.listRange(toDateStr(from), toDateStr(to)),
+      window.api.workingHours.listAll(),
+      window.api.scheduleBlocks.list(from.toISOString(), addDays(to, 1).toISOString())
+    ])
     if (id !== requestId.current) return
     if (result.ok && result.data) setAppointments(result.data)
+    if (hoursResult.ok && hoursResult.data) setHours(hoursResult.data)
+    if (blocksResult.ok && blocksResult.data) setBlocks(blocksResult.data)
     setLoaded(true)
   }, [view, cursor])
 
@@ -225,9 +239,12 @@ export function AgendaCalendar(): JSX.Element {
     if (!completing) return
     const result = await window.api.appointments.complete(completing.id, usedItems)
     if (!result.ok) throw new Error(result.error ?? 'Não foi possível finalizar')
+    const finished = completing
     setCompleting(null)
     toast.success(usedItems.length > 0 ? 'Atendimento finalizado e estoque atualizado' : 'Atendimento finalizado')
     load()
+    // Depois da baixa de estoque, abre a cobrança já preenchida.
+    setCharging(finished)
   }
 
   // ---------- montagem das colunas ----------
@@ -241,8 +258,10 @@ export function AgendaCalendar(): JSX.Element {
     return { startHour: s, endHour: Math.min(e, 24) }
   }, [visible])
 
-  const { columns, apptsByColumn } = useMemo(() => {
+  const { columns, apptsByColumn, unavailable } = useMemo(() => {
     const map = new Map<string, Appointment[]>()
+    const off = new Map<string, Unavailable[]>()
+    const visibleIds = visibleProfessionals.map((p) => p.id)
     let cols: GridColumn[] = []
 
     if (view === 'day') {
@@ -273,9 +292,13 @@ export function AgendaCalendar(): JSX.Element {
       for (const c of cols) map.set(c.key, [])
       for (const a of visible) map.get(toDateStr(new Date(a.startAt)))?.push(a)
     }
-    return { columns: cols, apptsByColumn: map }
+    for (const c of cols) {
+      const ids = view === 'day' ? [c.key] : visibleIds
+      off.set(c.key, unavailableRanges({ dateStr: c.date, professionalIds: ids, hours, blocks }))
+    }
+    return { columns: cols, apptsByColumn: map, unavailable: off }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, cursor, visible, visibleProfessionals.length, colorOf, todayStr])
+  }, [view, cursor, visible, visibleProfessionals.length, colorOf, todayStr, hours, blocks])
 
   const selectedProcedure = completing ? procedureTypes.find((p) => p.id === completing.procedureTypeId) : undefined
   const scrollKey = `${view}|${cursorStr}`
@@ -405,6 +428,7 @@ export function AgendaCalendar(): JSX.Element {
             colorOf={colorOf}
             showProfessional={view === 'week'}
             scrollKey={scrollKey}
+            unavailable={unavailable}
             onCreate={handleGridCreate}
             onOpen={(appt, rect) => setPopover({ appt, rect })}
           />
@@ -422,8 +446,29 @@ export function AgendaCalendar(): JSX.Element {
             setCompleting(popover.appt)
             setPopover(null)
           }}
+          onCharge={() => {
+            setCharging(popover.appt)
+            setPopover(null)
+          }}
           onNoShow={() => handleNoShow(popover.appt)}
           onCancel={() => handleCancel(popover.appt)}
+        />
+      )}
+
+      {charging && (
+        <ChargeModal
+          prefill={{
+            patientId: charging.patientId,
+            professionalId: charging.professionalId,
+            appointmentId: charging.id,
+            procedureTypeId: charging.procedureTypeId
+          }}
+          closeLabel="Agora não"
+          onClose={() => setCharging(null)}
+          onSaved={() => {
+            setCharging(null)
+            load()
+          }}
         />
       )}
 

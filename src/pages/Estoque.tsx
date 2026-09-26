@@ -1,12 +1,17 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useFeedback } from '../components/Feedback'
+import { ExpenseModal } from '../components/ExpenseModal'
+import { useClinic } from '../context/ClinicContext'
 import { parseMoneyInput } from '@shared/money'
-import type { InventoryBatchAlert, InventoryItemInput, InventoryItemSummary } from '@shared/types'
+import { formatCurrency } from '../utils/masks'
+import type { ExpenseInput, InventoryBatchAlert, InventoryItemInput, InventoryItemSummary } from '@shared/types'
 
 const emptyItemInput: InventoryItemInput = { name: '', category: '', unit: 'unidade', minQuantity: 0, unitCostCents: 0 }
 
 export function Estoque(): JSX.Element {
-  const { toast } = useFeedback()
+  const { toast, confirm } = useFeedback()
+  const { staff } = useClinic()
+  const [expensePreset, setExpensePreset] = useState<Partial<ExpenseInput> | null>(null)
   const [items, setItems] = useState<InventoryItemSummary[]>([])
   const [alerts, setAlerts] = useState<InventoryBatchAlert[]>([])
   const [itemForm, setItemForm] = useState<InventoryItemInput>(emptyItemInput)
@@ -52,9 +57,11 @@ export function Estoque(): JSX.Element {
   async function handleEntry(): Promise<void> {
     setMoveError(null)
     setMoveLoading(true)
+    const entryItem = items.find((i) => i.id === moveItemId)
+    const entryQuantity = Number(moveQuantity)
     const result = await window.api.inventory.addEntry({
       itemId: moveItemId,
-      quantity: Number(moveQuantity),
+      quantity: entryQuantity,
       expiryDate: moveExpiry || undefined
     })
     setMoveLoading(false)
@@ -67,6 +74,26 @@ export function Estoque(): JSX.Element {
     toast.success('Entrada registrada')
     loadItems()
     loadAlerts()
+
+    // Compra de material: oferece lançar como despesa (custo unitário x quantidade).
+    const canExpense = staff.role === 'owner' || staff.role === 'admin'
+    if (canExpense && entryItem && entryItem.unitCostCents > 0 && entryQuantity > 0) {
+      const amountCents = Math.round(entryItem.unitCostCents * entryQuantity)
+      const ok = await confirm({
+        title: 'Lançar como despesa?',
+        message: `Compra de ${entryQuantity} ${entryItem.unit} de ${entryItem.name} (${formatCurrency(amountCents)}). Quer lançar em Financeiro › Despesas, na categoria Materiais?`,
+        confirmLabel: 'Lançar despesa'
+      })
+      if (ok) {
+        setExpensePreset({
+          description: `Compra de ${entryItem.name} (${entryQuantity} ${entryItem.unit})`,
+          category: 'materiais',
+          kind: 'variavel',
+          amountCents,
+          paid: true
+        })
+      }
+    }
   }
 
   async function handleExit(): Promise<void> {
@@ -214,6 +241,18 @@ export function Estoque(): JSX.Element {
         </button>
       </div>
       {moveError && <p className="error">{moveError}</p>}
+
+      {expensePreset && (
+        <ExpenseModal
+          expense={null}
+          preset={expensePreset}
+          onClose={() => setExpensePreset(null)}
+          onSaved={() => {
+            setExpensePreset(null)
+            toast.success('Despesa lançada em Financeiro › Despesas')
+          }}
+        />
+      )}
     </div>
   )
 }
