@@ -64,7 +64,7 @@ export function SeriesChart({
   const [ref, width] = useElementWidth<HTMLDivElement>()
   const [hover, setHover] = useState<number | null>(null)
 
-  const max = useMemo(() => niceMax(Math.max(0, ...points.map((p) => p.total))), [points])
+  const max = useMemo(() => niceMax(Math.max(0, ...points.map((p) => p.totalCents))), [points])
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * max)
 
   const innerW = Math.max(width - PAD.left - PAD.right, 10)
@@ -73,7 +73,7 @@ export function SeriesChart({
   const barW = Math.max(Math.min(slot * 0.66, 34), 2)
   const labelW = granularity === 'day' ? 46 : 58
   const labelStep = Math.max(1, Math.ceil(labelW / slot))
-  const empty = points.every((p) => p.total === 0)
+  const empty = points.every((p) => p.totalCents === 0)
 
   const hovered = hover !== null ? points[hover] : null
   const tipLeft = hover !== null ? PAD.left + slot * hover + slot / 2 : 0
@@ -95,19 +95,19 @@ export function SeriesChart({
               <g key={t}>
                 <line x1={PAD.left} x2={width - PAD.right} y1={y} y2={y} className="chart-grid" />
                 <text x={PAD.left - 10} y={y + 4} textAnchor="end" className="chart-axis">
-                  {t === 0 ? 'R$ 0' : compact.format(t)}
+                  {t === 0 ? 'R$ 0' : compact.format(t / 100)}
                 </text>
               </g>
             )
           })}
 
           {points.map((p, i) => {
-            const h = (p.total / max) * innerH
+            const h = (p.totalCents / max) * innerH
             const x = PAD.left + slot * i + (slot - barW) / 2
             return (
               <g key={p.key} onMouseEnter={() => setHover(i)}>
                 <rect x={PAD.left + slot * i} y={PAD.top} width={slot} height={innerH} fill="transparent" />
-                {p.total > 0 && (
+                {p.totalCents > 0 && (
                   <rect
                     x={x}
                     y={PAD.top + innerH - h}
@@ -134,7 +134,7 @@ export function SeriesChart({
       {hovered && (
         <div className="chart-tooltip" style={{ left: Math.min(Math.max(tipLeft, 90), Math.max(width - 90, 90)) }}>
           <strong>{tooltipTitle(hovered.key, granularity)}</strong>
-          <span>{formatCurrency(hovered.total)}</span>
+          <span>{formatCurrency(hovered.totalCents)}</span>
           <small>
             {hovered.count} {hovered.count === 1 ? 'venda' : 'vendas'}
           </small>
@@ -150,17 +150,17 @@ export function RankingBars({
   maxRows = 8,
   emptyText
 }: {
-  rows: { label: string; total: number }[]
+  rows: { label: string; totalCents: number }[]
   maxRows?: number
   emptyText: string
 }): JSX.Element {
-  const sorted = [...rows].sort((a, b) => b.total - a.total)
+  const sorted = [...rows].sort((a, b) => b.totalCents - a.totalCents)
   const shown = sorted.slice(0, maxRows)
-  const rest = sorted.slice(maxRows).reduce((sum, r) => sum + r.total, 0)
-  if (rest > 0) shown.push({ label: 'Outros', total: rest })
+  const rest = sorted.slice(maxRows).reduce((sum, r) => sum + r.totalCents, 0)
+  if (rest > 0) shown.push({ label: 'Outros', totalCents: rest })
 
-  const sum = sorted.reduce((s, r) => s + r.total, 0)
-  const max = Math.max(...shown.map((r) => r.total), 1)
+  const sum = sorted.reduce((s, r) => s + r.totalCents, 0)
+  const max = Math.max(...shown.map((r) => r.totalCents), 1)
 
   if (shown.length === 0) return <p className="chart-none">{emptyText}</p>
 
@@ -173,13 +173,13 @@ export function RankingBars({
               {row.label}
             </span>
             <span className="ranking-value">
-              {formatCurrency(row.total)} <small>{sum > 0 ? Math.round((row.total / sum) * 100) : 0}%</small>
+              {formatCurrency(row.totalCents)} <small>{sum > 0 ? Math.round((row.totalCents / sum) * 100) : 0}%</small>
             </span>
           </div>
           <div className="ranking-track">
             <div
               className="ranking-fill"
-              style={{ width: `${(row.total / max) * 100}%`, animationDelay: `${i * 50}ms` }}
+              style={{ width: `${(row.totalCents / max) * 100}%`, animationDelay: `${i * 50}ms` }}
             />
           </div>
         </li>

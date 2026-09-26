@@ -40,7 +40,7 @@ export function ProcedureTypes(): JSX.Element {
     <div>
       <div className="page-head">
         <div>
-          <h1>Tipos de procedimento</h1>
+          <h2 className="section-title">Tipos de procedimento</h2>
           <p className="subtitle">
             A duração bloqueia o horário na agenda e os produtos cadastrados são descontados do estoque ao finalizar o
             atendimento.
@@ -79,7 +79,7 @@ export function ProcedureTypes(): JSX.Element {
                   {p.requiresRoom && <span className="tag">usa sala</span>}
                 </td>
                 <td>{p.durationMinutes} min</td>
-                <td>{formatCurrency(p.defaultPrice)}</td>
+                <td>{formatCurrency(p.defaultPriceCents)}</td>
                 <td>
                   {p.items.length === 0 ? (
                     <span className="muted">—</span>

@@ -400,3 +400,14 @@ create policy "public can create booking requests"
   on public.booking_requests for insert
   to anon
   with check (clinic_id in (select id from public.clinics where self_booking_enabled = true));
+
+-- ============================================================
+-- Fase 1 / Etapa 0: dinheiro em CENTAVOS INTEIROS
+-- As colunas antigas (em reais, sem sufixo) ficam intocadas por segurança;
+-- o app passa a ler e gravar só as colunas *_cents.
+-- ============================================================
+alter table public.procedure_types add column if not exists default_price_cents bigint;
+alter table public.inventory_items add column if not exists unit_cost_cents bigint;
+alter table public.sales add column if not exists total_amount_cents bigint;
+alter table public.sale_items add column if not exists unit_price_cents bigint;
+alter table public.sale_items add column if not exists subtotal_cents bigint;

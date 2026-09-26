@@ -45,7 +45,7 @@ export function registerSalesHandlers(): void {
         id: row.sales.id,
         patientId: row.sales.patientId,
         patientName: row.patients?.name ?? '(paciente removido)',
-        totalAmount: row.sales.totalAmount,
+        totalAmountCents: row.sales.totalAmountCents,
         paymentMethod: row.sales.paymentMethod,
         status: row.sales.status,
         createdAt: row.sales.createdAt,
@@ -56,8 +56,8 @@ export function registerSalesHandlers(): void {
             description: item.description,
             kind: item.kind,
             quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            subtotal: item.subtotal
+            unitPriceCents: item.unitPriceCents,
+            subtotalCents: item.subtotalCents
           }))
       }))
 
@@ -74,7 +74,7 @@ export function registerSalesHandlers(): void {
 
       if (input.items.length === 0) throw new Error('Adicione ao menos um item à venda')
 
-      const totalAmount = input.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+      const totalAmountCents = input.items.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPriceCents), 0)
       const saleId = randomUUID()
       const timestamp = nowIso()
       const staffMemberId = getCurrentStaffMemberId()
@@ -87,7 +87,7 @@ export function registerSalesHandlers(): void {
             patientId: input.patientId,
             appointmentId: null,
             professionalId: null,
-            totalAmount,
+            totalAmountCents,
             paymentMethod: input.paymentMethod,
             status: 'paga',
             createdBy: staffMemberId,
@@ -109,8 +109,8 @@ export function registerSalesHandlers(): void {
               procedureTypeId: item.procedureTypeId ?? null,
               inventoryItemId: item.inventoryItemId ?? null,
               quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              subtotal: item.quantity * item.unitPrice,
+              unitPriceCents: item.unitPriceCents,
+              subtotalCents: Math.round(item.quantity * item.unitPriceCents),
               createdAt: timestamp,
               updatedAt: timestamp,
               syncStatus: 'pending',
@@ -151,13 +151,13 @@ export function registerSalesHandlers(): void {
           .where(and(gte(sales.createdAt, params.from), lt(sales.createdAt, params.to), isNull(sales.deletedAt)))
           .all()
 
-        const totalAmount = salesInRange.reduce((sum, s) => sum + s.totalAmount, 0)
+        const totalAmountCents = salesInRange.reduce((sum, s) => sum + s.totalAmountCents, 0)
 
         const byPaymentMethodMap = new Map<PaymentMethod, number>()
         for (const sale of salesInRange) {
           byPaymentMethodMap.set(
             sale.paymentMethod,
-            (byPaymentMethodMap.get(sale.paymentMethod) ?? 0) + sale.totalAmount
+            (byPaymentMethodMap.get(sale.paymentMethod) ?? 0) + sale.totalAmountCents
           )
         }
 
@@ -172,21 +172,21 @@ export function registerSalesHandlers(): void {
         const byProcedureTypeMap = new Map<string, number>()
         for (const item of itemsInRange) {
           if (item.kind !== 'procedimento') continue
-          byProcedureTypeMap.set(item.description, (byProcedureTypeMap.get(item.description) ?? 0) + item.subtotal)
+          byProcedureTypeMap.set(item.description, (byProcedureTypeMap.get(item.description) ?? 0) + item.subtotalCents)
         }
 
         return {
           ok: true,
           data: {
-            totalAmount,
+            totalAmountCents,
             salesCount: salesInRange.length,
-            byPaymentMethod: [...byPaymentMethodMap.entries()].map(([paymentMethod, total]) => ({
+            byPaymentMethod: [...byPaymentMethodMap.entries()].map(([paymentMethod, totalCents]) => ({
               paymentMethod,
-              total
+              totalCents
             })),
             byProcedureType: [...byProcedureTypeMap.entries()]
-              .map(([name, total]) => ({ name, total }))
-              .sort((a, b) => b.total - a.total)
+              .map(([name, totalCents]) => ({ name, totalCents }))
+              .sort((a, b) => b.totalCents - a.totalCents)
           }
         }
       } catch (error) {
@@ -219,15 +219,15 @@ export function registerSalesHandlers(): void {
         let guard = 0
         while (cursor <= end && guard++ < 1500) {
           const key = bucketKey(cursor, params.granularity)
-          buckets.set(key, { key, total: 0, count: 0 })
+          buckets.set(key, { key, totalCents: 0, count: 0 })
           if (params.granularity === 'day') cursor.setDate(cursor.getDate() + 1)
           else cursor.setMonth(cursor.getMonth() + 1)
         }
 
         for (const sale of salesInRange) {
           const key = bucketKey(new Date(sale.createdAt), params.granularity)
-          const point = buckets.get(key) ?? { key, total: 0, count: 0 }
-          point.total += sale.totalAmount
+          const point = buckets.get(key) ?? { key, totalCents: 0, count: 0 }
+          point.totalCents += sale.totalAmountCents
           point.count += 1
           buckets.set(key, point)
         }

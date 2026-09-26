@@ -1901,12 +1901,30 @@ button {
 }
 
 /* Agenda: barra de ferramentas e filtros */
-.agenda-page {
+.agenda-wrap {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 72px);
   min-height: 480px;
   gap: 12px;
+}
+
+.agenda-wrap > .subtabs {
+  margin-bottom: 0;
+}
+
+.agenda-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+
+.agenda-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .cal-toolbar {
@@ -2486,4 +2504,57 @@ button {
   .card.modal-card.wide {
     width: 100%;
   }
+}
+
+/* Abas dentro de uma página (Financeiro, Cadastros, Agenda) */
+.subtabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 2px 0 16px;
+  border-radius: 16px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  align-self: flex-start;
+}
+
+.subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.subtab:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.subtab.active {
+  color: #fff;
+  background: var(--accent);
+}
+
+.subtab-badge {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  background: var(--danger);
+  color: #fff;
+}
+
+.section-title {
+  margin: 0 0 4px;
 }

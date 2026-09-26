@@ -9,11 +9,9 @@ const links: { to: string; label: string; icon: IconName; end: boolean }[] = [
   { to: '/', label: 'Início', icon: 'home', end: true },
   { to: '/agenda', label: 'Agenda', icon: 'calendar', end: false },
   { to: '/patients', label: 'Pacientes', icon: 'patients', end: false },
-  { to: '/professionals', label: 'Profissionais', icon: 'professional', end: false },
-  { to: '/rooms', label: 'Salas', icon: 'room', end: false },
-  { to: '/procedure-types', label: 'Tipos de procedimento', icon: 'procedure', end: false },
+  { to: '/financeiro', label: 'Financeiro', icon: 'finance', end: false },
   { to: '/estoque', label: 'Estoque', icon: 'stock', end: false },
-  { to: '/vendas', label: 'Financeiro', icon: 'finance', end: false },
+  { to: '/cadastros', label: 'Cadastros', icon: 'folder', end: false },
   { to: '/configuracoes', label: 'Configurações', icon: 'settings', end: false }
 ]
 
@@ -70,7 +68,7 @@ export function AppShell(): JSX.Element {
           </div>
         )}
         <UpdateBanner />
-        <div key={location.pathname} className="page-enter">
+        <div key={location.pathname.split('/').slice(0, 2).join('/')} className="page-enter">
           <Outlet />
         </div>
       </main>

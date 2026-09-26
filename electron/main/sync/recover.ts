@@ -25,6 +25,12 @@ import {
  * usado nesse fluxo de recuperação, quando o computador perdeu o banco local
  * mas a clínica já existe na nuvem.
  */
+// Nuvem antiga guardava reais em colunas sem sufixo; a nova guarda centavos em colunas _cents.
+function centsFrom(cents: unknown, legacyReais: unknown): number {
+  if (typeof cents === 'number') return cents
+  return Math.round(Number(legacyReais ?? 0) * 100)
+}
+
 async function pullAllRows(
   supabase: SupabaseClient,
   clinicId: string,
@@ -146,7 +152,7 @@ export async function recoverClinicFromCloud(params: {
       clinicId: r.clinic_id,
       name: r.name,
       durationMinutes: r.duration_minutes,
-      defaultPrice: r.default_price,
+      defaultPriceCents: centsFrom(r.default_price_cents, r.default_price),
       requiresRoom: r.requires_room,
       bookableOnline: r.bookable_online,
       active: r.active,
@@ -181,7 +187,7 @@ export async function recoverClinicFromCloud(params: {
       category: r.category,
       unit: r.unit,
       minQuantity: r.min_quantity,
-      unitCost: r.unit_cost,
+      unitCostCents: centsFrom(r.unit_cost_cents, r.unit_cost),
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       syncStatus: 'synced',
@@ -225,7 +231,7 @@ export async function recoverClinicFromCloud(params: {
       patientId: r.patient_id,
       appointmentId: r.appointment_id,
       professionalId: r.professional_id,
-      totalAmount: r.total_amount,
+      totalAmountCents: centsFrom(r.total_amount_cents, r.total_amount),
       paymentMethod: r.payment_method,
       status: r.status,
       createdBy: r.created_by,
@@ -244,8 +250,8 @@ export async function recoverClinicFromCloud(params: {
       procedureTypeId: r.procedure_type_id,
       inventoryItemId: r.inventory_item_id,
       quantity: r.quantity,
-      unitPrice: r.unit_price,
-      subtotal: r.subtotal,
+      unitPriceCents: centsFrom(r.unit_price_cents, r.unit_price),
+      subtotalCents: centsFrom(r.subtotal_cents, r.subtotal),
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       syncStatus: 'synced',

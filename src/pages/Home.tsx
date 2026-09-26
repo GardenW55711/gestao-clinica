@@ -66,7 +66,7 @@ export function Home(): JSX.Element {
       warn: (lowStock ?? 0) > 0
     },
     {
-      to: '/configuracoes',
+      to: '/agenda/pedidos',
       icon: 'patients',
       label: 'Pedidos online',
       value: pending,

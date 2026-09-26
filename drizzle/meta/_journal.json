@@ -29,6 +29,13 @@
       "when": 1789772480186,
       "tag": "0003_large_la_nuit",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790448905568,
+      "tag": "0004_money_cents",
+      "breakpoints": true
     }
   ]
 }

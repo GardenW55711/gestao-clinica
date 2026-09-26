@@ -36,6 +36,9 @@ const PATHS: Record<string, ReactNode> = {
   ),
   stock: <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3 7.5 12 12l9-4.5M12 12v9" />,
   finance: <path d="M5 20v-8M12 20V5M19 20V9" />,
+  folder: (
+    <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2.5h6.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z" />
+  ),
   settings: (
     <>
       <path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M20 18h0" />

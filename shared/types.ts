@@ -96,7 +96,7 @@ export interface ProcedureType {
   id: string
   name: string
   durationMinutes: number
-  defaultPrice: number
+  defaultPriceCents: number
   requiresRoom: boolean
   bookableOnline: boolean
   active: boolean
@@ -106,7 +106,7 @@ export interface ProcedureType {
 export interface ProcedureTypeInput {
   name: string
   durationMinutes: number
-  defaultPrice: number
+  defaultPriceCents: number
   requiresRoom: boolean
   items: { inventoryItemId: string; defaultQuantity: number }[]
 }
@@ -148,7 +148,7 @@ export interface InventoryItemInput {
   category?: string
   unit: string
   minQuantity: number
-  unitCost: number
+  unitCostCents: number
 }
 
 export interface InventoryItemSummary {
@@ -157,7 +157,7 @@ export interface InventoryItemSummary {
   category: string | null
   unit: string
   minQuantity: number
-  unitCost: number
+  unitCostCents: number
   currentQuantity: number
   nextExpiry: string | null
 }
@@ -192,7 +192,7 @@ export interface SaleItemInput {
   procedureTypeId?: string
   inventoryItemId?: string
   quantity: number
-  unitPrice: number
+  unitPriceCents: number
 }
 
 export interface SaleInput {
@@ -206,28 +206,28 @@ export interface SaleItem {
   description: string
   kind: 'procedimento' | 'produto'
   quantity: number
-  unitPrice: number
-  subtotal: number
+  unitPriceCents: number
+  subtotalCents: number
 }
 
 export interface FinancialSeriesPoint {
   key: string
-  total: number
+  totalCents: number
   count: number
 }
 
 export interface FinancialSummary {
-  totalAmount: number
+  totalAmountCents: number
   salesCount: number
-  byPaymentMethod: { paymentMethod: PaymentMethod; total: number }[]
-  byProcedureType: { name: string; total: number }[]
+  byPaymentMethod: { paymentMethod: PaymentMethod; totalCents: number }[]
+  byProcedureType: { name: string; totalCents: number }[]
 }
 
 export interface Sale {
   id: string
   patientId: string
   patientName: string
-  totalAmount: number
+  totalAmountCents: number
   paymentMethod: PaymentMethod
   status: 'paga' | 'pendente'
   createdAt: string

@@ -51,7 +51,7 @@ export const procedureTypes = sqliteTable('procedure_types', {
   ...tenantColumns,
   name: text('name').notNull(),
   durationMinutes: integer('duration_minutes').notNull(),
-  defaultPrice: real('default_price').notNull().default(0),
+  defaultPriceCents: integer('default_price_cents').notNull().default(0),
   requiresRoom: integer('requires_room', { mode: 'boolean' }).notNull().default(false),
   bookableOnline: integer('bookable_online', { mode: 'boolean' }).notNull().default(false),
   active: integer('active', { mode: 'boolean' }).notNull().default(true)
@@ -101,7 +101,7 @@ export const inventoryItems = sqliteTable('inventory_items', {
   category: text('category'),
   unit: text('unit').notNull(),
   minQuantity: real('min_quantity').notNull().default(0),
-  unitCost: real('unit_cost').notNull().default(0)
+  unitCostCents: integer('unit_cost_cents').notNull().default(0)
 })
 
 export const inventoryBatches = sqliteTable('inventory_batches', {
@@ -130,7 +130,7 @@ export const sales = sqliteTable('sales', {
   patientId: text('patient_id').notNull(),
   appointmentId: text('appointment_id'),
   professionalId: text('professional_id'),
-  totalAmount: real('total_amount').notNull().default(0),
+  totalAmountCents: integer('total_amount_cents').notNull().default(0),
   paymentMethod: text('payment_method', { enum: ['dinheiro', 'cartao', 'pix', 'outro'] }).notNull(),
   status: text('status', { enum: ['paga', 'pendente'] }).notNull().default('paga'),
   createdBy: text('created_by')
@@ -144,8 +144,8 @@ export const saleItems = sqliteTable('sale_items', {
   procedureTypeId: text('procedure_type_id'),
   inventoryItemId: text('inventory_item_id'),
   quantity: real('quantity').notNull().default(1),
-  unitPrice: real('unit_price').notNull().default(0),
-  subtotal: real('subtotal').notNull().default(0)
+  unitPriceCents: integer('unit_price_cents').notNull().default(0),
+  subtotalCents: integer('subtotal_cents').notNull().default(0)
 })
 
 export const bookingRequests = sqliteTable('booking_requests', {

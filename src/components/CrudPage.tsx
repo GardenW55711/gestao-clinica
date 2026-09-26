@@ -25,6 +25,8 @@ interface CrudApiLike<Dto, Input> {
 
 interface Props<Dto extends { id: string }, Input extends object> {
   title: string
+  /** Dentro de uma página com abas, o título vira secundário (h2). */
+  embedded?: boolean
   description?: string
   itemName?: string
   fields: FieldConfig<Input>[]
@@ -35,6 +37,7 @@ interface Props<Dto extends { id: string }, Input extends object> {
 
 export function CrudPage<Dto extends { id: string }, Input extends object>({
   title,
+  embedded,
   description,
   itemName = 'registro',
   fields,
@@ -96,7 +99,7 @@ export function CrudPage<Dto extends { id: string }, Input extends object>({
 
   return (
     <div>
-      <h1>{title}</h1>
+      {embedded ? <h2 className="section-title">{title}</h2> : <h1>{title}</h1>}
       {description && <p className="subtitle">{description}</p>}
 
       <form key={formKey} className="inline-form" onSubmit={handleSubmit}>

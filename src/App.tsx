@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { SetupClinic } from './pages/SetupClinic'
 import { ClinicLogin } from './pages/ClinicLogin'
 import { StaffPicker } from './pages/StaffPicker'
 import { AppShell } from './components/AppShell'
 import { Home } from './pages/Home'
 import { Agenda } from './pages/Agenda'
+import { AgendaCalendar } from './pages/AgendaCalendar'
+import { OnlineRequests } from './pages/OnlineRequests'
 import { Patients } from './pages/Patients'
 import { Professionals } from './pages/Professionals'
 import { Rooms } from './pages/Rooms'
 import { ProcedureTypes } from './pages/ProcedureTypes'
 import { Estoque } from './pages/Estoque'
-import { Vendas } from './pages/Vendas'
+import { FinanceiroLayout } from './pages/financeiro/FinanceiroLayout'
+import { FinanceiroOverview } from './pages/financeiro/FinanceiroOverview'
+import { FinanceiroRecebimentos } from './pages/financeiro/FinanceiroRecebimentos'
+import { CadastrosLayout } from './pages/cadastros/CadastrosLayout'
 import { ThemeToggle } from './components/ThemeToggle'
 import { Configuracoes } from './pages/Configuracoes'
 import { ClinicContext } from './context/ClinicContext'
@@ -79,13 +84,27 @@ function App(): JSX.Element {
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<Home />} />
-            <Route path="/agenda" element={<Agenda />} />
+            <Route path="/agenda" element={<Agenda />}>
+              <Route index element={<AgendaCalendar />} />
+              <Route path="pedidos" element={<OnlineRequests />} />
+            </Route>
             <Route path="/patients" element={<Patients />} />
-            <Route path="/professionals" element={<Professionals />} />
-            <Route path="/rooms" element={<Rooms />} />
-            <Route path="/procedure-types" element={<ProcedureTypes />} />
+            <Route path="/cadastros" element={<CadastrosLayout />}>
+              <Route index element={<Navigate to="profissionais" replace />} />
+              <Route path="profissionais" element={<Professionals />} />
+              <Route path="salas" element={<Rooms />} />
+              <Route path="procedimentos" element={<ProcedureTypes />} />
+            </Route>
             <Route path="/estoque" element={<Estoque />} />
-            <Route path="/vendas" element={<Vendas />} />
+            <Route path="/financeiro" element={<FinanceiroLayout />}>
+              <Route index element={<FinanceiroOverview />} />
+              <Route path="recebimentos" element={<FinanceiroRecebimentos />} />
+            </Route>
+            {/* Endereços antigos continuam funcionando */}
+            <Route path="/vendas" element={<Navigate to="/financeiro" replace />} />
+            <Route path="/professionals" element={<Navigate to="/cadastros/profissionais" replace />} />
+            <Route path="/rooms" element={<Navigate to="/cadastros/salas" replace />} />
+            <Route path="/procedure-types" element={<Navigate to="/cadastros/procedimentos" replace />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
           </Route>
         </Routes>

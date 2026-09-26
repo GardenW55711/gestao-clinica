@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useFeedback } from '../components/Feedback'
+import { parseMoneyInput } from '@shared/money'
 import type { InventoryBatchAlert, InventoryItemInput, InventoryItemSummary } from '@shared/types'
 
-const emptyItemInput: InventoryItemInput = { name: '', category: '', unit: 'unidade', minQuantity: 0, unitCost: 0 }
+const emptyItemInput: InventoryItemInput = { name: '', category: '', unit: 'unidade', minQuantity: 0, unitCostCents: 0 }
 
 export function Estoque(): JSX.Element {
   const { toast } = useFeedback()
@@ -10,6 +11,7 @@ export function Estoque(): JSX.Element {
   const [alerts, setAlerts] = useState<InventoryBatchAlert[]>([])
   const [itemForm, setItemForm] = useState<InventoryItemInput>(emptyItemInput)
   const [itemError, setItemError] = useState<string | null>(null)
+  const [unitCostText, setUnitCostText] = useState('')
 
   const [moveItemId, setMoveItemId] = useState('')
   const [moveQuantity, setMoveQuantity] = useState('')
@@ -42,6 +44,7 @@ export function Estoque(): JSX.Element {
       return
     }
     setItemForm(emptyItemInput)
+    setUnitCostText('')
     toast.success('Item cadastrado')
     loadItems()
   }
@@ -130,8 +133,13 @@ export function Estoque(): JSX.Element {
           Custo unitário (R$)
           <input
             type="number"
-            value={itemForm.unitCost}
-            onChange={(e) => setItemForm({ ...itemForm, unitCost: Number(e.target.value) })}
+            min="0"
+            step="0.01"
+            value={unitCostText}
+            onChange={(e) => {
+              setUnitCostText(e.target.value)
+              setItemForm({ ...itemForm, unitCostCents: parseMoneyInput(e.target.value) })
+            }}
           />
         </label>
         <button type="submit">Adicionar item</button>

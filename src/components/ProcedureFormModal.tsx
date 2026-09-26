@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react'
 import type { InventoryItemSummary, ProcedureType } from '@shared/types'
+import { centsToInput, parseMoneyInput } from '@shared/money'
 import { useEscapeKey } from '../utils/useEscapeKey'
 import { Icon } from './Icons'
 import { ItemPicker } from './ItemPicker'
@@ -22,7 +23,7 @@ export function ProcedureFormModal({ procedure, inventory, onClose, onSaved }: P
   useEscapeKey(onClose)
   const [name, setName] = useState(procedure?.name ?? '')
   const [duration, setDuration] = useState(String(procedure?.durationMinutes ?? 30))
-  const [price, setPrice] = useState(String(procedure?.defaultPrice ?? 0))
+  const [price, setPrice] = useState(centsToInput(procedure?.defaultPriceCents ?? 0))
   const [requiresRoom, setRequiresRoom] = useState(procedure?.requiresRoom ?? false)
   const [rows, setRows] = useState<Row[]>(
     (procedure?.items ?? []).map((i) => ({
@@ -52,7 +53,7 @@ export function ProcedureFormModal({ procedure, inventory, onClose, onSaved }: P
     const input = {
       name: name.trim(),
       durationMinutes: Number(duration),
-      defaultPrice: Number(price) || 0,
+      defaultPriceCents: parseMoneyInput(price),
       requiresRoom,
       items
     }

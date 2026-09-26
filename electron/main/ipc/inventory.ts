@@ -46,7 +46,7 @@ export function registerInventoryHandlers(): void {
           category: item.category,
           unit: item.unit,
           minQuantity: item.minQuantity,
-          unitCost: item.unitCost,
+          unitCostCents: item.unitCostCents,
           currentQuantity,
           nextExpiry: nextExpiry ?? null
         }
@@ -73,7 +73,7 @@ export function registerInventoryHandlers(): void {
           category: input.category ?? null,
           unit: input.unit,
           minQuantity: input.minQuantity,
-          unitCost: input.unitCost,
+          unitCostCents: input.unitCostCents,
           createdAt: timestamp,
           updatedAt: timestamp,
           syncStatus: 'pending',
@@ -89,7 +89,7 @@ export function registerInventoryHandlers(): void {
           category: input.category ?? null,
           unit: input.unit,
           minQuantity: input.minQuantity,
-          unitCost: input.unitCost,
+          unitCostCents: input.unitCostCents,
           currentQuantity: 0,
           nextExpiry: null
         }

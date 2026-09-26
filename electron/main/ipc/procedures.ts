@@ -23,7 +23,7 @@ function requireClinicId(): string {
 function validate(input: ProcedureTypeInput): void {
   if (!input.name?.trim()) throw new Error('Informe o nome do procedimento')
   if (!(input.durationMinutes > 0)) throw new Error('A duração precisa ser maior que zero')
-  if (input.defaultPrice < 0) throw new Error('O preço não pode ser negativo')
+  if (input.defaultPriceCents < 0) throw new Error('O preço não pode ser negativo')
   for (const item of input.items ?? []) {
     if (!(item.defaultQuantity > 0)) throw new Error('A quantidade padrão de cada produto precisa ser maior que zero')
   }
@@ -59,7 +59,7 @@ function toDto(row: typeof procedureTypes.$inferSelect, usage: Map<string, Proce
     id: row.id,
     name: row.name,
     durationMinutes: row.durationMinutes,
-    defaultPrice: row.defaultPrice,
+    defaultPriceCents: row.defaultPriceCents,
     requiresRoom: row.requiresRoom,
     bookableOnline: row.bookableOnline,
     active: row.active,
@@ -142,7 +142,7 @@ export function registerProcedureHandlers(): void {
             clinicId,
             name: input.name.trim(),
             durationMinutes: input.durationMinutes,
-            defaultPrice: input.defaultPrice,
+            defaultPriceCents: input.defaultPriceCents,
             requiresRoom: input.requiresRoom,
             bookableOnline: false,
             active: true,
@@ -175,7 +175,7 @@ export function registerProcedureHandlers(): void {
             .set({
               name: params.input.name.trim(),
               durationMinutes: params.input.durationMinutes,
-              defaultPrice: params.input.defaultPrice,
+              defaultPriceCents: params.input.defaultPriceCents,
               requiresRoom: params.input.requiresRoom,
               updatedAt: nowIso(),
               syncStatus: 'pending'

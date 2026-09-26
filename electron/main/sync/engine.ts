@@ -49,6 +49,19 @@ async function pushPendingTable(
   }
 }
 
+/**
+ * Tabelas com valores em centavos dependem das colunas *_cents na nuvem
+ * (criadas ao rodar o supabase/schema.sql atualizado). Se ainda não existirem,
+ * não trava o resto da sincronização: os dados ficam "pending" e sobem depois.
+ */
+async function pushMoneyTable(label: string, push: () => Promise<void>): Promise<void> {
+  try {
+    await push()
+  } catch (error) {
+    console.warn('[sync] ' + label + ' aguardando atualização da nuvem:', (error as Error).message)
+  }
+}
+
 export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolean; error?: string }> {
   const supabase = getSupabase()
   if (!supabase) return { ok: false, error: 'Nuvem não configurada' }
@@ -126,19 +139,19 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       deleted_at: row.deletedAt
     }))
 
-    await pushPendingTable(supabase, procedureTypes, 'procedure_types', (row) => ({
+    await pushMoneyTable('procedure_types', () => pushPendingTable(supabase, procedureTypes, 'procedure_types', (row) => ({
       id: row.id,
       clinic_id: row.clinicId,
       name: row.name,
       duration_minutes: row.durationMinutes,
-      default_price: row.defaultPrice,
+      default_price_cents: row.defaultPriceCents,
       requires_room: row.requiresRoom,
       bookable_online: row.bookableOnline,
       active: row.active,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt
-    }))
+    })))
 
     await pushPendingTable(supabase, appointments, 'appointments', (row) => ({
       id: row.id,
@@ -157,18 +170,18 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       deleted_at: row.deletedAt
     }))
 
-    await pushPendingTable(supabase, inventoryItems, 'inventory_items', (row) => ({
+    await pushMoneyTable('inventory_items', () => pushPendingTable(supabase, inventoryItems, 'inventory_items', (row) => ({
       id: row.id,
       clinic_id: row.clinicId,
       name: row.name,
       category: row.category,
       unit: row.unit,
       min_quantity: row.minQuantity,
-      unit_cost: row.unitCost,
+      unit_cost_cents: row.unitCostCents,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt
-    }))
+    })))
 
     await pushPendingTable(supabase, inventoryBatches, 'inventory_batches', (row) => ({
       id: row.id,
@@ -199,22 +212,22 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       deleted_at: row.deletedAt
     }))
 
-    await pushPendingTable(supabase, sales, 'sales', (row) => ({
+    await pushMoneyTable('sales', () => pushPendingTable(supabase, sales, 'sales', (row) => ({
       id: row.id,
       clinic_id: row.clinicId,
       patient_id: row.patientId,
       appointment_id: row.appointmentId,
       professional_id: row.professionalId,
-      total_amount: row.totalAmount,
+      total_amount_cents: row.totalAmountCents,
       payment_method: row.paymentMethod,
       status: row.status,
       created_by: row.createdBy,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt
-    }))
+    })))
 
-    await pushPendingTable(supabase, saleItems, 'sale_items', (row) => ({
+    await pushMoneyTable('sale_items', () => pushPendingTable(supabase, saleItems, 'sale_items', (row) => ({
       id: row.id,
       clinic_id: row.clinicId,
       sale_id: row.saleId,
@@ -223,12 +236,12 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       procedure_type_id: row.procedureTypeId,
       inventory_item_id: row.inventoryItemId,
       quantity: row.quantity,
-      unit_price: row.unitPrice,
-      subtotal: row.subtotal,
+      unit_price_cents: row.unitPriceCents,
+      subtotal_cents: row.subtotalCents,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
       deleted_at: row.deletedAt
-    }))
+    })))
 
     await pushPendingTable(supabase, bookingRequests, 'booking_requests', (row) => ({
       id: row.id,
