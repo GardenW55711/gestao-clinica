@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { useEscapeKey } from '../utils/useEscapeKey'
+import { PatientPicker } from './PatientPicker'
 import type { AppointmentInput, Patient, Professional, ProcedureType, Room } from '@shared/types'
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   procedureTypes: ProcedureType[]
   rooms: Room[]
   error?: string | null
+  onPatientCreated: (patient: Patient) => void
   onCancel: () => void
   onSubmit: (input: AppointmentInput) => Promise<void>
 }
@@ -47,19 +49,16 @@ export function NewAppointmentForm(props: Props): JSX.Element {
       <form className="card modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>Novo agendamento</h2>
 
-        <label>
-          Paciente
-          <select autoFocus value={patientId} onChange={(e) => setPatientId(e.target.value)} required>
-            <option value="" disabled>
-              Selecione...
-            </option>
-            {props.patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="field">
+          <span className="field-label">Paciente</span>
+          <PatientPicker
+            autoFocus
+            patients={props.patients}
+            value={patientId}
+            onChange={setPatientId}
+            onCreated={props.onPatientCreated}
+          />
+        </div>
 
         <label>
           Profissional

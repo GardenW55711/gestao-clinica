@@ -9,6 +9,10 @@ import { Agenda } from './pages/Agenda'
 import { AgendaCalendar } from './pages/AgendaCalendar'
 import { OnlineRequests } from './pages/OnlineRequests'
 import { Patients } from './pages/Patients'
+import { PatientFile } from './pages/patients/PatientFile'
+import { PatientData } from './pages/patients/PatientData'
+import { PatientAppointments } from './pages/patients/PatientAppointments'
+import { PatientFinance } from './pages/patients/PatientFinance'
 import { Professionals } from './pages/Professionals'
 import { Rooms } from './pages/Rooms'
 import { ProcedureTypes } from './pages/ProcedureTypes'
@@ -17,6 +21,7 @@ import { FinanceiroLayout } from './pages/financeiro/FinanceiroLayout'
 import { FinanceiroOverview } from './pages/financeiro/FinanceiroOverview'
 import { FinanceiroRecebimentos } from './pages/financeiro/FinanceiroRecebimentos'
 import { FinanceiroDespesas } from './pages/financeiro/FinanceiroDespesas'
+import { FinanceiroRelatorios } from './pages/financeiro/FinanceiroRelatorios'
 import { CadastrosLayout } from './pages/cadastros/CadastrosLayout'
 import { ThemeToggle } from './components/ThemeToggle'
 import { ConfiguracoesLayout } from './pages/configuracoes/ConfiguracoesLayout'
@@ -95,6 +100,11 @@ function App(): JSX.Element {
               <Route path="pedidos" element={<OnlineRequests />} />
             </Route>
             <Route path="/patients" element={<Patients />} />
+            <Route path="/patients/:id" element={<PatientFile />}>
+              <Route index element={<PatientData />} />
+              <Route path="atendimentos" element={<PatientAppointments />} />
+              <Route path="financeiro" element={<PatientFinance />} />
+            </Route>
             <Route path="/cadastros" element={<CadastrosLayout />}>
               <Route index element={<Navigate to="profissionais" replace />} />
               <Route path="profissionais" element={<Professionals />} />
@@ -106,6 +116,7 @@ function App(): JSX.Element {
               <Route index element={<FinanceiroOverview />} />
               <Route path="recebimentos" element={<FinanceiroRecebimentos />} />
               <Route path="despesas" element={<FinanceiroDespesas />} />
+              <Route path="relatorios" element={<FinanceiroRelatorios />} />
             </Route>
             {/* Endereços antigos continuam funcionando */}
             <Route path="/vendas" element={<Navigate to="/financeiro" replace />} />

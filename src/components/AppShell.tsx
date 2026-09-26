@@ -5,14 +5,14 @@ import { ThemeToggle } from './ThemeToggle'
 import { UpdateBanner, VersionFooter } from './UpdateInfo'
 import { Icon, type IconName } from './Icons'
 
-const links: { to: string; label: string; icon: IconName; end: boolean }[] = [
+const links: { to: string; label: string; icon: IconName; end: boolean; managersOnly?: boolean }[] = [
   { to: '/', label: 'Início', icon: 'home', end: true },
   { to: '/agenda', label: 'Agenda', icon: 'calendar', end: false },
   { to: '/patients', label: 'Pacientes', icon: 'patients', end: false },
   { to: '/financeiro', label: 'Financeiro', icon: 'finance', end: false },
   { to: '/estoque', label: 'Estoque', icon: 'stock', end: false },
-  { to: '/cadastros', label: 'Cadastros', icon: 'folder', end: false },
-  { to: '/configuracoes', label: 'Configurações', icon: 'settings', end: false }
+  { to: '/cadastros', label: 'Cadastros', icon: 'folder', end: false, managersOnly: true },
+  { to: '/configuracoes', label: 'Configurações', icon: 'settings', end: false, managersOnly: true }
 ]
 
 function useOnline(): boolean {
@@ -31,7 +31,8 @@ function useOnline(): boolean {
 }
 
 export function AppShell(): JSX.Element {
-  const { clinicName } = useClinic()
+  const { clinicName, staff } = useClinic()
+  const isManager = staff.role === 'owner' || staff.role === 'admin'
   const location = useLocation()
   const online = useOnline()
 
@@ -43,7 +44,7 @@ export function AppShell(): JSX.Element {
           <span className="nav-label">{clinicName}</span>
         </h2>
         <nav>
-          {links.map((link) => (
+          {links.filter((link) => isManager || !link.managersOnly).map((link) => (
             <NavLink
               key={link.to}
               to={link.to}

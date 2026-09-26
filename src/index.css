@@ -2862,3 +2862,533 @@ button.sale-chip:hover:not(:disabled) {
   margin: 0;
   font-size: 14px;
 }
+
+/* ============ Fase 1 / Etapa C: indicadores ============ */
+
+.explainer {
+  padding: 12px 18px;
+  margin-bottom: 14px;
+  max-width: none;
+  border-radius: 18px;
+}
+
+.explainer p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.explainer strong {
+  color: var(--text);
+}
+
+.indicator-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.indicator-grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .indicator-grid,
+  .indicator-grid.four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.tile.indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border-left: 4px solid transparent;
+}
+
+.tile.indicator .tile-value {
+  font-size: 26px;
+}
+
+.tile.indicator.traffic-green {
+  border-left-color: #2f9e6e;
+}
+
+.tile.indicator.traffic-yellow {
+  border-left-color: #d99a2b;
+}
+
+.tile.indicator.traffic-red {
+  border-left-color: var(--danger);
+}
+
+.tile.indicator.traffic-red .tile-value {
+  color: var(--danger);
+}
+
+.indicator-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.indicator-head h3 {
+  margin: 0;
+  color: var(--text);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.section-head .section-title {
+  margin: 0;
+}
+
+/* Ícone (i) com a fórmula */
+.info-tip {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-muted);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  font-family: Georgia, serif;
+  cursor: help;
+  outline: none;
+}
+
+.info-tip:hover,
+.info-tip:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.info-tip-bubble {
+  display: none;
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-30%);
+  width: 290px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-family: -apple-system, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 450;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.info-tip-bubble strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.info-tip:hover .info-tip-bubble,
+.info-tip:focus .info-tip-bubble {
+  display: block;
+}
+
+/* Comparação com o período anterior */
+.delta {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.delta.good {
+  color: var(--accent);
+}
+
+.delta.bad {
+  color: var(--danger);
+}
+
+.delta .muted {
+  font-weight: 400;
+}
+
+/* Ponto de equilíbrio */
+.break-even {
+  max-width: none;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+
+.be-numbers {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.be-numbers > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.be-value {
+  font-size: 24px;
+}
+
+.progress {
+  height: 14px;
+  border-radius: 999px;
+  background: var(--row-line);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d99a2b, var(--accent));
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.progress-bar.reached {
+  background: var(--accent);
+}
+
+.be-message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.be-message.good {
+  color: var(--accent);
+}
+
+.be-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 32px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.be-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--row-line);
+}
+
+.be-breakdown .sub {
+  padding-left: 14px;
+  color: var(--text-muted);
+}
+
+.be-breakdown dt,
+.be-breakdown dd {
+  margin: 0;
+}
+
+/* Ocupação por profissional */
+.occupancy-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ranking-fill.traffic-yellow {
+  background: linear-gradient(90deg, #d99a2b, #e8b95a);
+}
+
+.ranking-fill.traffic-red {
+  background: linear-gradient(90deg, var(--danger), #e78c84);
+}
+
+/* Margem por procedimento */
+tr.low-margin td {
+  background: rgba(217, 154, 43, 0.1);
+}
+
+/* Fluxo de caixa */
+.cf-line {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.cf-in {
+  stroke: #2f9e6e;
+  background: #2f9e6e;
+}
+
+.cf-out {
+  stroke: #d6567a;
+  background: #d6567a;
+}
+
+.cf-balance {
+  stroke: #3b82c4;
+  background: #3b82c4;
+  stroke-dasharray: 6 4;
+}
+
+svg .cf-balance.cf-dot {
+  fill: #3b82c4;
+  stroke: none;
+}
+
+.cf-cursor {
+  stroke: var(--text-muted);
+  stroke-dasharray: 3 3;
+  opacity: 0.5;
+}
+
+.chart-grid.zero {
+  stroke: var(--text-muted);
+  opacity: 0.6;
+}
+
+.cf-legend {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cf-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+  stroke: none;
+}
+
+.cf-in-text {
+  color: #2f9e6e;
+}
+
+.cf-out-text {
+  color: #d6567a;
+}
+
+/* Cartões de análise ocupam a largura toda (a regra geral limita .card a 980px) */
+.content .card.filter-bar,
+.content .card.explainer,
+.content .card.break-even,
+.content .card.chart-card {
+  max-width: none;
+}
+
+/* ============ Fase 1 / Etapa D: pacientes ============ */
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+  margin-bottom: 14px;
+  max-width: 620px;
+  border-radius: 16px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+
+.search-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 11px 4px;
+}
+
+.search-bar input:focus {
+  box-shadow: none;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--accent);
+}
+
+.patient-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.patient-head h1 {
+  margin: 0;
+}
+
+.patient-head .subtitle {
+  margin: 0;
+}
+
+.patient-avatar {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.patient-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stat-chip {
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+
+.stat-chip strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.stat-chip.warn {
+  background: rgba(217, 154, 43, 0.2);
+}
+
+.stat-chip.danger {
+  background: rgba(220, 80, 70, 0.16);
+}
+
+.stat-chip.danger strong {
+  color: var(--danger);
+}
+
+/* Busca de paciente dentro do novo agendamento */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.patient-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.patient-chip > span {
+  flex: 1;
+}
+
+.patient-chip .link-button {
+  margin: 0;
+}
+
+.quick-patient {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--glass-strong);
+  border: 1px dashed var(--accent);
+}
+
+.picker-option.create {
+  color: var(--accent);
+  font-weight: 600;
+  gap: 8px;
+}
+
+textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--glass-strong);
+  outline: none;
+  resize: vertical;
+}
+
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ============ Fase 1 / Etapa E: painel inicial ============ */
+
+a.tile.home-goal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0 18px;
+  padding: 18px 22px;
+  max-width: none;
+  text-decoration: none;
+  color: var(--text);
+}
+
+a.tile.home-goal .be-numbers > span {
+  display: flex;
+  flex-direction: column;
+}
+
+a.tile.home-goal .be-numbers {
+  display: flex;
+  gap: 40px;
+}

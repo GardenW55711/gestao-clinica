@@ -6,6 +6,7 @@ import { getDb } from '../db/client'
 import * as schema from '../db/schema'
 import { inventoryItems, procedureTypeItems, procedureTypes } from '../db/schema'
 import { getCurrentClinicId } from '../session'
+import { MANAGERS, requireRole } from './util'
 import type { ApiResult, ProcedureItemUsage, ProcedureType, ProcedureTypeInput } from '@shared/types'
 
 type Db = BetterSQLite3Database<typeof schema>
@@ -129,6 +130,7 @@ export function registerProcedureHandlers(): void {
 
   ipcMain.handle('procedureTypes:create', (_e, input: ProcedureTypeInput): ApiResult<ProcedureType> => {
     try {
+      requireRole(...MANAGERS)
       validate(input)
       const clinicId = requireClinicId()
       const db = getDb()
@@ -166,6 +168,7 @@ export function registerProcedureHandlers(): void {
     'procedureTypes:update',
     (_e, params: { id: string; input: ProcedureTypeInput }): ApiResult<ProcedureType> => {
       try {
+      requireRole(...MANAGERS)
         validate(params.input)
         const clinicId = requireClinicId()
         const db = getDb()
@@ -195,6 +198,7 @@ export function registerProcedureHandlers(): void {
 
   ipcMain.handle('procedureTypes:remove', (_e, id: string): ApiResult<null> => {
     try {
+      requireRole(...MANAGERS)
       const db = getDb()
       const timestamp = nowIso()
       db.transaction((tx) => {

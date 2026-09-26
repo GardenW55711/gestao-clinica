@@ -5,7 +5,7 @@ import { getDb } from '../db/client'
 import { clinics, procedureTypes, professionals, patients, bookingRequests } from '../db/schema'
 import { getCurrentClinicId } from '../session'
 import { createAppointment } from './appointments'
-import { MANAGERS, handle } from './util'
+import { MANAGERS, NOT_PROFESSIONAL, handle, requireRole } from './util'
 import type { ApiResult, CardFees, ClinicSettings, BookingRequestSummary } from '@shared/types'
 
 function nowIso(): string {
@@ -61,6 +61,7 @@ export function registerBookingHandlers(): void {
 
   ipcMain.handle('clinic:setSelfBooking', (_e, enabled: boolean): ApiResult<null> => {
     try {
+      requireRole(...MANAGERS)
       const db = getDb()
       db.update(clinics).set({ selfBookingEnabled: enabled, updatedAt: nowIso() }).run()
       return { ok: true, data: null }
@@ -73,6 +74,7 @@ export function registerBookingHandlers(): void {
     'procedureTypes:setBookableOnline',
     (_e, params: { id: string; enabled: boolean }): ApiResult<null> => {
       try {
+      requireRole(...MANAGERS)
         const db = getDb()
         db.update(procedureTypes)
           .set({ bookableOnline: params.enabled, updatedAt: nowIso(), syncStatus: 'pending' })
@@ -116,6 +118,7 @@ export function registerBookingHandlers(): void {
 
   ipcMain.handle('bookingRequests:approve', (_e, id: string): ApiResult<null> => {
     try {
+      requireRole(...NOT_PROFESSIONAL)
       const clinicId = requireClinicId()
       const db = getDb()
 
@@ -172,6 +175,7 @@ export function registerBookingHandlers(): void {
 
   ipcMain.handle('bookingRequests:reject', (_e, id: string): ApiResult<null> => {
     try {
+      requireRole(...NOT_PROFESSIONAL)
       const db = getDb()
       db.update(bookingRequests)
         .set({ status: 'rejected', updatedAt: nowIso(), syncStatus: 'pending' })

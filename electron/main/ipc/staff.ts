@@ -4,7 +4,8 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { getDb } from '../db/client'
 import { professionals, staffMembers } from '../db/schema'
 import { getCurrentStaffMemberId, getCurrentStaffRole } from '../session'
-import { MANAGERS, handle, nowIso, requireClinicId } from './util'
+import { EVERYONE, MANAGERS, handle, nowIso, requireClinicId } from './util'
+import { ownProfessionalId } from './sales'
 import type { StaffInput, StaffMember, StaffRole } from '@shared/types'
 
 const PIN_RX = /^\d{4,8}$/
@@ -54,6 +55,9 @@ function assertCanAssign(role: StaffRole): void {
 }
 
 export function registerStaffHandlers(): void {
+  // Profissional da agenda ligado a quem está usando o programa (nulo se não houver).
+  handle('staff:myProfessionalId', EVERYONE, (): string | null => ownProfessionalId())
+
   handle('staff:list', MANAGERS, (): StaffMember[] =>
     getDb()
       .select()

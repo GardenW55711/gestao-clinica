@@ -7,6 +7,7 @@ interface Props {
   appt: Appointment
   anchor: DOMRect
   color: string
+  canEdit?: boolean
   onClose: () => void
   onConfirm: () => void
   onFinish: () => void
@@ -17,7 +18,7 @@ interface Props {
 
 const WIDTH = 340
 
-export function AppointmentPopover({ appt, anchor, color, onClose, onConfirm, onFinish, onCharge, onNoShow, onCancel }: Props): JSX.Element {
+export function AppointmentPopover({ appt, anchor, color, canEdit = true, onClose, onConfirm, onFinish, onCharge, onNoShow, onCancel }: Props): JSX.Element {
   useEscapeKey(onClose)
 
   const start = new Date(appt.startAt)
@@ -28,7 +29,7 @@ export function AppointmentPopover({ appt, anchor, color, onClose, onConfirm, on
   const left = spaceRight > WIDTH + 24 ? anchor.right + 10 : Math.max(anchor.left - WIDTH - 10, 12)
   const top = Math.min(Math.max(anchor.top - 8, 12), Math.max(window.innerHeight - 420, 12))
 
-  const open = appt.status === 'scheduled' || appt.status === 'confirmed'
+  const open = canEdit && (appt.status === 'scheduled' || appt.status === 'confirmed')
 
   return (
     <div className="popover-layer" onClick={onClose}>
@@ -78,7 +79,7 @@ export function AppointmentPopover({ appt, anchor, color, onClose, onConfirm, on
           )}
         </ul>
 
-        {appt.status === 'completed' && (
+        {appt.status === 'completed' && canEdit && (
           <div className="popover-actions">
             {appt.saleId ? (
               <p className="popover-sale">

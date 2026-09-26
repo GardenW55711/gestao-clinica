@@ -39,8 +39,13 @@ import type {
   ScheduleBlock,
   ScheduleBlockInput,
   StaffMember,
-  StaffInput
+  StaffInput,
+  OverviewData,
+  ReportsData,
+  ProductionRow,
+  DashboardSummary
 } from '@shared/types'
+import type { Range } from '@shared/indicators'
 
 function crudApi<Dto, Input>(prefix: string): {
   list: () => Promise<ApiResult<Dto[]>>
@@ -88,6 +93,8 @@ const api = {
       ipcRenderer.invoke('appointments:listByDate', dateIso),
     listRange: (from: string, to: string): Promise<ApiResult<Appointment[]>> =>
       ipcRenderer.invoke('appointments:listRange', { from, to }),
+    listByPatient: (patientId: string): Promise<ApiResult<Appointment[]>> =>
+      ipcRenderer.invoke('appointments:listByPatient', patientId),
     create: (input: AppointmentInput): Promise<ApiResult<Appointment>> =>
       ipcRenderer.invoke('appointments:create', input),
     setStatus: (id: string, status: AppointmentStatus): Promise<ApiResult<null>> =>
@@ -118,6 +125,13 @@ const api = {
     financialSeries: (from: string, to: string, granularity: 'day' | 'month'): Promise<ApiResult<FinancialSeriesPoint[]>> =>
       ipcRenderer.invoke('sales:financialSeries', { from, to, granularity })
   },
+  finance: {
+    dashboard: (): Promise<ApiResult<DashboardSummary>> => ipcRenderer.invoke('dashboard:summary'),
+    overview: (range: Range): Promise<ApiResult<OverviewData>> => ipcRenderer.invoke('finance:overview', range),
+    reports: (range: Range, granularity: 'day' | 'month'): Promise<ApiResult<ReportsData>> =>
+      ipcRenderer.invoke('finance:reports', { range, granularity }),
+    myProduction: (range: Range): Promise<ApiResult<ProductionRow[]>> => ipcRenderer.invoke('finance:myProduction', range)
+  },
   expenses: {
     list: (from: string, to: string): Promise<ApiResult<Expense[]>> => ipcRenderer.invoke('expenses:list', { from, to }),
     create: (input: ExpenseInput): Promise<ApiResult<Expense>> => ipcRenderer.invoke('expenses:create', input),
@@ -139,6 +153,7 @@ const api = {
     remove: (id: string): Promise<ApiResult<null>> => ipcRenderer.invoke('scheduleBlocks:remove', id)
   },
   staff: {
+    myProfessionalId: (): Promise<ApiResult<string | null>> => ipcRenderer.invoke('staff:myProfessionalId'),
     list: (): Promise<ApiResult<StaffMember[]>> => ipcRenderer.invoke('staff:list'),
     create: (input: StaffInput): Promise<ApiResult<StaffMember>> => ipcRenderer.invoke('staff:create', input),
     update: (id: string, input: StaffInput): Promise<ApiResult<StaffMember>> =>

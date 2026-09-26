@@ -8,7 +8,8 @@ export function FinanceiroLayout(): JSX.Element {
   const isManager = staff.role === 'owner' || staff.role === 'admin'
 
   // Dono/admin veem tudo. Os demais só cuidam das cobranças e recebimentos.
-  if (!isManager && (pathname === '/financeiro' || pathname.endsWith('/despesas'))) {
+  const blocked = pathname === '/financeiro' || pathname.endsWith('/despesas') || (pathname.endsWith('/relatorios') && staff.role !== 'professional')
+  if (!isManager && blocked) {
     return <Navigate to="/financeiro/recebimentos" replace />
   }
 
@@ -16,9 +17,15 @@ export function FinanceiroLayout(): JSX.Element {
     ? [
         { to: '/financeiro', label: 'Visão geral', end: true },
         { to: '/financeiro/recebimentos', label: 'Recebimentos' },
-        { to: '/financeiro/despesas', label: 'Despesas' }
+        { to: '/financeiro/despesas', label: 'Despesas' },
+        { to: '/financeiro/relatorios', label: 'Relatórios' }
       ]
-    : [{ to: '/financeiro/recebimentos', label: 'Recebimentos' }]
+    : staff.role === 'professional'
+      ? [
+          { to: '/financeiro/recebimentos', label: 'Recebimentos' },
+          { to: '/financeiro/relatorios', label: 'Minha produção' }
+        ]
+      : [{ to: '/financeiro/recebimentos', label: 'Recebimentos' }]
 
   return (
     <div>

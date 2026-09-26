@@ -4,6 +4,7 @@ import { and, eq, isNull, lte } from 'drizzle-orm'
 import { getDb } from '../db/client'
 import { inventoryItems, inventoryBatches, inventoryMovements } from '../db/schema'
 import { getCurrentClinicId, getCurrentStaffMemberId } from '../session'
+import { EVERYONE, NOT_PROFESSIONAL, requireRole } from './util'
 import { consumeInventoryFefo } from '../inventory/fefo'
 import type {
   ApiResult,
@@ -60,6 +61,7 @@ export function registerInventoryHandlers(): void {
 
   ipcMain.handle('inventory:items:create', (_e, input: InventoryItemInput): ApiResult<InventoryItemSummary> => {
     try {
+      requireRole(...NOT_PROFESSIONAL)
       const clinicId = requireClinicId()
       const db = getDb()
       const id = randomUUID()
@@ -101,6 +103,7 @@ export function registerInventoryHandlers(): void {
 
   ipcMain.handle('inventory:items:remove', (_e, id: string): ApiResult<null> => {
     try {
+      requireRole(...NOT_PROFESSIONAL)
       const db = getDb()
       db.update(inventoryItems)
         .set({ deletedAt: nowIso(), updatedAt: nowIso(), syncStatus: 'pending' })
@@ -116,6 +119,7 @@ export function registerInventoryHandlers(): void {
   // validade diferente da anterior, mesmo sendo o mesmo item).
   ipcMain.handle('inventory:batches:addEntry', (_e, input: InventoryEntryInput): ApiResult<null> => {
     try {
+      requireRole(...NOT_PROFESSIONAL)
       const clinicId = requireClinicId()
       const db = getDb()
       const timestamp = nowIso()
@@ -167,6 +171,7 @@ export function registerInventoryHandlers(): void {
   // reduzir a chance de perder material por vencimento.
   ipcMain.handle('inventory:movements:addExit', (_e, input: InventoryExitInput): ApiResult<null> => {
     try {
+      requireRole(...EVERYONE)
       const clinicId = requireClinicId()
       const db = getDb()
 

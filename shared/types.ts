@@ -407,3 +407,98 @@ export interface BookingRequestSummary {
   desiredStartAt: string
   status: 'pending_review' | 'accepted' | 'rejected'
 }
+
+
+// ---------- Indicadores (Fase 1 / Etapa C) ----------
+
+export interface IndicatorRange {
+  from: string
+  to: string
+}
+
+export interface VariableCostBreakdown {
+  variableExpensesCents: number
+  cardFeesCents: number
+  commissionsCents: number
+  materialsConsumedCents: number
+}
+
+export interface OverviewData {
+  range: IndicatorRange
+  previous: IndicatorRange
+  received: { netCents: number; grossCents: number; feeCents: number; previousNetCents: number }
+  expenses: { cents: number; previousCents: number }
+  profit: { cents: number; previousCents: number }
+  margin: { percent: number | null; previousPercent: number | null }
+  receivable: { cents: number; count: number }
+  delinquency: {
+    percent: number | null
+    previousPercent: number | null
+    overdueCents: number
+    overdueCount: number
+    dueCount: number
+  }
+  produced: { cents: number; previousCents: number; completedCount: number }
+  breakEven: {
+    month: string // AAAA-MM
+    fixedCents: number
+    receivedCents: number // recebido bruto no mês
+    variableCents: number
+    variable: VariableCostBreakdown
+    contributionMarginPercent: number | null
+    breakEvenCents: number | null
+    missingCents: number | null
+    reached: boolean
+    progressPercent: number
+  }
+}
+
+export interface ProductionRow {
+  professionalId: string
+  name: string
+  appointments: number
+  producedCents: number
+  receivedCents: number
+  commissionPercent: number
+  commissionCents: number
+}
+
+export interface ProcedureMarginRow {
+  procedureTypeId: string
+  name: string
+  priceCents: number
+  materialsCents: number
+  feeCents: number
+  commissionCents: number
+  marginCents: number
+  marginPercent: number | null
+  soldCount: number
+  estimated: boolean // sem vendas no período: usa o preço padrão
+}
+
+export interface OccupancyRow {
+  professionalId: string
+  name: string
+  bookedMinutes: number
+  availableMinutes: number
+  percent: number | null
+}
+
+export interface ReportsData {
+  range: IndicatorRange
+  ticket: { producedCents: number; completedCount: number; ticketCents: number; previousTicketCents: number }
+  occupancy: { percent: number | null; bookedMinutes: number; availableMinutes: number; byProfessional: OccupancyRow[] }
+  noShow: { percent: number | null; previousPercent: number | null; noShowCount: number; totalCount: number }
+  idleCost: { idleMinutes: number; costCents: number; fixedMonthCents: number; availableMonthMinutes: number }
+  production: ProductionRow[]
+  procedureMargins: ProcedureMarginRow[]
+  expensesByCategory: { category: string; totalCents: number }[]
+  cashflow: { key: string; inCents: number; outCents: number; balanceCents: number }[]
+}
+
+export interface DashboardSummary {
+  dueTodayCents: number
+  dueTodayCount: number
+  overdueCents: number
+  overdueCount: number
+}

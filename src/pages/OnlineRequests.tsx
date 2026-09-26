@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useFeedback } from '../components/Feedback'
 import { Icon } from '../components/Icons'
+import { useClinic } from '../context/ClinicContext'
 import type { BookingRequestSummary } from '@shared/types'
 import type { AgendaOutletContext } from './Agenda'
 
 /** Pedidos de agendamento enviados pelos pacientes pela página pública. */
 export function OnlineRequests(): JSX.Element {
   const { toast, confirm } = useFeedback()
+  const { staff } = useClinic()
+  const canAnswer = staff.role !== 'professional'
   const { refreshPending } = useOutletContext<AgendaOutletContext>()
   const [requests, setRequests] = useState<BookingRequestSummary[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -72,12 +75,16 @@ export function OnlineRequests(): JSX.Element {
               <td>{r.procedureTypeName ?? '-'}</td>
               <td>{new Date(r.desiredStartAt).toLocaleString('pt-BR')}</td>
               <td className="request-actions">
-                <button type="button" onClick={() => handleApprove(r.id)}>
-                  Aprovar
-                </button>
-                <button type="button" className="link-button" onClick={() => handleReject(r.id)}>
-                  Recusar
-                </button>
+                {canAnswer && (
+                  <>
+                    <button type="button" onClick={() => handleApprove(r.id)}>
+                      Aprovar
+                    </button>
+                    <button type="button" className="link-button" onClick={() => handleReject(r.id)}>
+                      Recusar
+                    </button>
+                  </>
+                )}
               </td>
             </tr>
           ))}

@@ -12,6 +12,7 @@ import { registerProcedureHandlers } from './ipc/procedures'
 import { registerExpenseHandlers } from './ipc/expenses'
 import { registerScheduleHandlers } from './ipc/schedule'
 import { registerStaffHandlers } from './ipc/staff'
+import { registerReportHandlers } from './ipc/reports'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -67,6 +68,7 @@ app.whenReady().then(() => {
   registerExpenseHandlers()
   registerScheduleHandlers()
   registerStaffHandlers()
+  registerReportHandlers()
 
   createWindow()
 

@@ -1,140 +1,221 @@
-import { useEffect, useMemo, useState } from 'react'
-import { RankingBars, SeriesChart } from '../../components/Charts'
-import { formatCurrency } from '../../utils/masks'
-import type { FinancialSeriesPoint, FinancialSummary } from '@shared/types'
+import { useEffect, useState } from 'react'
 import { PAYMENT_LABELS } from '@shared/types'
-import { Granularity, PERIOD_LABELS, PeriodMode, parseInputDate, presetRange } from './periods'
+import type { FinancialSeriesPoint, FinancialSummary, OverviewData } from '@shared/types'
+import { delinquencyTraffic, marginTraffic, profitTraffic } from '@shared/indicators'
+import { RankingBars, SeriesChart } from '../../components/Charts'
+import { Delta, IndicatorCard, InfoTip, formatPercent } from '../../components/finance/Indicator'
+import { usePeriodFilter } from '../../components/finance/PeriodFilter'
+import { formatCurrency } from '../../utils/masks'
+import type { Granularity } from './periods'
+
+function monthLabel(yyyyMm: string): string {
+  const [y, m] = yyyyMm.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+}
 
 export function FinanceiroOverview(): JSX.Element {
-  const [mode, setMode] = useState<PeriodMode>('month')
-  const [customFrom, setCustomFrom] = useState('')
-  const [customTo, setCustomTo] = useState('')
+  const { range, node } = usePeriodFilter('month')
   const [granularity, setGranularity] = useState<Granularity>('day')
+  const [data, setData] = useState<OverviewData | null>(null)
   const [summary, setSummary] = useState<FinancialSummary | null>(null)
   const [series, setSeries] = useState<FinancialSeriesPoint[]>([])
 
-  const customInvalid = mode === 'custom' && customFrom !== '' && customTo !== '' && customFrom > customTo
-  const customIncomplete = mode === 'custom' && (customFrom === '' || customTo === '')
-
-  const range = useMemo(() => {
-    if (mode !== 'custom') return presetRange(mode)
-    if (customFrom === '' || customTo === '' || customFrom > customTo) return null
-    return { from: parseInputDate(customFrom, false), to: parseInputDate(customTo, true) }
-  }, [mode, customFrom, customTo])
-
-  const rangeKey = range ? `${range.from.toISOString()}|${range.to.toISOString()}` : null
-
-
-  async function loadFinancial(): Promise<void> {
-    if (!range) return
-    const from = range.from.toISOString()
-    const to = range.to.toISOString()
-    const [sum, ser] = await Promise.all([
-      window.api.sales.financialSummary(from, to),
-      window.api.sales.financialSeries(from, to, granularity)
-    ])
-    if (sum.ok && sum.data) setSummary(sum.data)
-    if (ser.ok && ser.data) setSeries(ser.data)
-  }
+  const rangeKey = range ? `${range.from}|${range.to}` : null
 
   useEffect(() => {
-    loadFinancial()
+    if (!range) return
+    let cancelled = false
+    Promise.all([
+      window.api.finance.overview(range),
+      window.api.sales.financialSummary(range.from, range.to),
+      window.api.sales.financialSeries(range.from, range.to, granularity)
+    ]).then(([ov, sum, ser]) => {
+      if (cancelled) return
+      if (ov.ok && ov.data) setData(ov.data)
+      if (sum.ok && sum.data) setSummary(sum.data)
+      if (ser.ok && ser.data) setSeries(ser.data)
+    })
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rangeKey, granularity])
 
-  function choosePreset(preset: Exclude<PeriodMode, 'custom'>): void {
-    setMode(preset)
-    setCustomFrom('')
-    setCustomTo('')
-  }
-
-  const totalAmount = summary?.totalAmountCents ?? 0
-  const salesCount = summary?.salesCount ?? 0
-  const ticket = salesCount > 0 ? Math.round(totalAmount / salesCount) : 0
+  const be = data?.breakEven
 
   return (
     <div>
-      <p className="subtitle">Controle de faturamento da clínica — cobranças por procedimento e produto.</p>
+      {node}
 
-      <div className="filter-bar card">
-        <div className="period-picker" role="group" aria-label="Período">
-          {(Object.keys(PERIOD_LABELS) as Exclude<PeriodMode, 'custom'>[]).map((p) => (
-            <button
-              key={p}
-              type="button"
-              className={p === mode ? 'period-btn active' : 'period-btn'}
-              onClick={() => choosePreset(p)}
+      <div className="explainer card">
+        <p>
+          <strong>Produzido</strong> é o valor dos atendimentos realizados no período — mesmo que o paciente ainda não
+          tenha pago. <strong>Recebido</strong> é o dinheiro que de fato entrou, pela data em que cada parcela foi paga.
+          {data && (
+            <>
+              {' '}
+              No período: produzido <strong>{formatCurrency(data.produced.cents)}</strong> ({data.produced.completedCount}{' '}
+              atendimentos) · recebido <strong>{formatCurrency(data.received.netCents)}</strong>.
+            </>
+          )}
+        </p>
+      </div>
+
+      {!data && <div className="skeleton block" />}
+
+      {data && (
+        <>
+          <div className="indicator-grid">
+            <IndicatorCard
+              title="Recebido"
+              value={formatCurrency(data.received.netCents)}
+              phrase="Dinheiro que entrou no caixa."
+              formula="Soma das parcelas recebidas no período, já descontada a taxa do cartão (valor líquido)."
             >
-              {PERIOD_LABELS[p]}
-            </button>
-          ))}
-        </div>
+              <span className="tile-hint">
+                bruto {formatCurrency(data.received.grossCents)} · taxas {formatCurrency(data.received.feeCents)}
+              </span>
+              <Delta current={data.received.netCents} previous={data.received.previousNetCents} />
+            </IndicatorCard>
 
-        <div className={mode === 'custom' ? 'date-range active' : 'date-range'}>
-          <label>
-            De
-            <input
-              type="date"
-              value={customFrom}
-              max={customTo || undefined}
-              onChange={(e) => {
-                setCustomFrom(e.target.value)
-                setMode('custom')
-              }}
-            />
-          </label>
-          <label>
-            Até
-            <input
-              type="date"
-              value={customTo}
-              min={customFrom || undefined}
-              onChange={(e) => {
-                setCustomTo(e.target.value)
-                setMode('custom')
-              }}
-            />
-          </label>
-        </div>
+            <IndicatorCard
+              title="Despesas"
+              value={formatCurrency(data.expenses.cents)}
+              phrase="Tudo que saiu do caixa."
+              formula="Soma das despesas marcadas como pagas no período."
+            >
+              <Delta current={data.expenses.cents} previous={data.expenses.previousCents} goodWhen="down" />
+            </IndicatorCard>
 
-        {customInvalid && <span className="error">A data inicial não pode ser depois da final.</span>}
-        {customIncomplete && !customInvalid && <span className="filter-hint">Informe as duas datas.</span>}
-      </div>
+            <IndicatorCard
+              title="Lucro"
+              value={formatCurrency(data.profit.cents)}
+              phrase="O que sobrou de verdade."
+              formula="Recebido − Despesas. Fica vermelho quando é negativo."
+              traffic={profitTraffic(data.profit.cents)}
+            >
+              <Delta current={data.profit.cents} previous={data.profit.previousCents} />
+            </IndicatorCard>
 
-      <div className="tiles kpis">
-        <div className="tile static">
-          <span className="tile-label">Faturamento</span>
-          <span className="tile-value">{formatCurrency(totalAmount)}</span>
-          <span className="tile-hint">no período selecionado</span>
-        </div>
-        <div className="tile static">
-          <span className="tile-label">Vendas</span>
-          <span className="tile-value">{salesCount}</span>
-          <span className="tile-hint">cobranças registradas</span>
-        </div>
-        <div className="tile static">
-          <span className="tile-label">Ticket médio</span>
-          <span className="tile-value">{formatCurrency(ticket)}</span>
-          <span className="tile-hint">por venda</span>
-        </div>
-      </div>
+            <IndicatorCard
+              title="Margem de lucro"
+              value={formatPercent(data.margin.percent)}
+              phrase="De cada R$ 100 que entram, quanto sobra."
+              formula="Lucro ÷ Recebido × 100. Verde a partir de 35%, amarelo de 20% a 35%, vermelho abaixo de 20%."
+              traffic={marginTraffic(data.margin.percent)}
+            >
+              <Delta current={data.margin.percent} previous={data.margin.previousPercent} unit="points" />
+            </IndicatorCard>
+
+            <IndicatorCard
+              title="A receber"
+              value={formatCurrency(data.receivable.cents)}
+              phrase="O que ainda vai entrar."
+              formula="Soma das parcelas pendentes com vencimento de hoje em diante."
+            >
+              <span className="tile-hint">
+                {data.receivable.count} {data.receivable.count === 1 ? 'parcela' : 'parcelas'} a vencer
+              </span>
+            </IndicatorCard>
+
+            <IndicatorCard
+              title="Em atraso (inadimplência)"
+              value={formatPercent(data.delinquency.percent)}
+              phrase="Quanto está atrasado."
+              formula="Parcelas vencidas e não pagas ÷ total de parcelas que venciam no período × 100. Verde abaixo de 5%, amarelo de 5% a 10%, vermelho acima de 10%."
+              traffic={delinquencyTraffic(data.delinquency.percent)}
+            >
+              <span className="tile-hint">
+                {data.delinquency.overdueCount > 0
+                  ? `${formatCurrency(data.delinquency.overdueCents)} em ${data.delinquency.overdueCount} ${data.delinquency.overdueCount === 1 ? 'parcela' : 'parcelas'}`
+                  : data.delinquency.dueCount > 0
+                    ? 'nada atrasado'
+                    : 'nenhuma parcela venceu no período'}
+              </span>
+              <Delta current={data.delinquency.percent} previous={data.delinquency.previousPercent} unit="points" goodWhen="down" />
+            </IndicatorCard>
+          </div>
+
+          {be && (
+            <div className="card break-even">
+              <div className="indicator-head">
+                <h3>Ponto de equilíbrio — {monthLabel(be.month)}</h3>
+                <InfoTip formula="Custos fixos do mês ÷ margem de contribuição (%). A margem de contribuição é (recebido − custos variáveis) ÷ recebido. Custos variáveis = despesas variáveis + taxas de cartão + comissões + custo dos materiais consumidos (a compra de material não entra aqui, para não contar duas vezes). O recebido é o valor bruto do mês." />
+              </div>
+              <p className="tile-hint">Quanto a clínica precisa faturar no mês para não ter prejuízo.</p>
+
+              {be.breakEvenCents === null ? (
+                <p className="be-message">
+                  {be.receivedCents <= 0
+                    ? 'Ainda não há recebimentos neste mês — não dá para calcular.'
+                    : 'Os custos variáveis já consomem toda a receita deste mês — não há ponto de equilíbrio.'}
+                </p>
+              ) : (
+                <>
+                  <div className="be-numbers">
+                    <div>
+                      <span className="tile-label">Precisa faturar</span>
+                      <strong className="be-value">{formatCurrency(be.breakEvenCents)}</strong>
+                    </div>
+                    <div>
+                      <span className="tile-label">Já recebeu no mês</span>
+                      <strong className="be-value">{formatCurrency(be.receivedCents)}</strong>
+                    </div>
+                  </div>
+                  <div className="progress" role="progressbar" aria-valuenow={Math.round(be.progressPercent)} aria-valuemin={0} aria-valuemax={100}>
+                    <div className={be.reached ? 'progress-bar reached' : 'progress-bar'} style={{ width: `${be.progressPercent}%` }} />
+                  </div>
+                  <p className={be.reached ? 'be-message good' : 'be-message'}>
+                    {be.reached
+                      ? 'Meta batida — tudo acima disso é lucro.'
+                      : `Faltam ${formatCurrency(be.missingCents ?? 0)} para cobrir os custos do mês.`}
+                  </p>
+                </>
+              )}
+
+              <dl className="be-breakdown">
+                <div>
+                  <dt>Custos fixos do mês</dt>
+                  <dd>{formatCurrency(be.fixedCents)}</dd>
+                </div>
+                <div>
+                  <dt>Custos variáveis</dt>
+                  <dd>{formatCurrency(be.variableCents)}</dd>
+                </div>
+                <div className="sub">
+                  <dt>Despesas variáveis</dt>
+                  <dd>{formatCurrency(be.variable.variableExpensesCents)}</dd>
+                </div>
+                <div className="sub">
+                  <dt>Taxas de cartão</dt>
+                  <dd>{formatCurrency(be.variable.cardFeesCents)}</dd>
+                </div>
+                <div className="sub">
+                  <dt>Comissões</dt>
+                  <dd>{formatCurrency(be.variable.commissionsCents)}</dd>
+                </div>
+                <div className="sub">
+                  <dt>Materiais consumidos</dt>
+                  <dd>{formatCurrency(be.variable.materialsConsumedCents)}</dd>
+                </div>
+                <div>
+                  <dt>Margem de contribuição</dt>
+                  <dd>{formatPercent(be.contributionMarginPercent)}</dd>
+                </div>
+              </dl>
+            </div>
+          )}
+        </>
+      )}
 
       <div className="card chart-card">
         <div className="chart-head">
           <h3>Vendas por período</h3>
           <div className="period-picker" role="group" aria-label="Agrupar por">
-            <button
-              type="button"
-              className={granularity === 'day' ? 'period-btn active' : 'period-btn'}
-              onClick={() => setGranularity('day')}
-            >
+            <button type="button" className={granularity === 'day' ? 'period-btn active' : 'period-btn'} onClick={() => setGranularity('day')}>
               Dia
             </button>
-            <button
-              type="button"
-              className={granularity === 'month' ? 'period-btn active' : 'period-btn'}
-              onClick={() => setGranularity('month')}
-            >
+            <button type="button" className={granularity === 'month' ? 'period-btn active' : 'period-btn'} onClick={() => setGranularity('month')}>
               Mês
             </button>
           </div>

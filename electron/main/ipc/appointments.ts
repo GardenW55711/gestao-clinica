@@ -3,7 +3,9 @@ import { randomUUID } from 'crypto'
 import { and, eq, inArray, isNull, gte, gt, lt, ne } from 'drizzle-orm'
 import { getDb } from '../db/client'
 import { appointments, patients, professionals, rooms, procedureTypes, sales } from '../db/schema'
-import { getCurrentClinicId, getCurrentStaffMemberId } from '../session'
+import { getCurrentClinicId, getCurrentStaffMemberId, getCurrentStaffRole } from '../session'
+import { EVERYONE, requireRole } from './util'
+import { ownProfessionalId } from './sales'
 import { consumeInventoryFefo } from '../inventory/fefo'
 import { checkScheduleAllowed } from './schedule'
 import type { ApiResult, Appointment, AppointmentInput, AppointmentStatus, StockUsageItem } from '@shared/types'
@@ -178,6 +180,24 @@ function attachSales(list: Appointment[]): Appointment[] {
   })
 }
 
+/**
+ * Profissional vê a agenda toda, mas só marca e altera os PRÓPRIOS atendimentos.
+ * (Dono, administrador e recepção mexem em tudo.)
+ */
+function assertCanTouchProfessional(professionalId: string): void {
+  requireRole(...EVERYONE)
+  if (getCurrentStaffRole() !== 'professional') return
+  if (professionalId !== ownProfessionalId()) throw new Error('Você só pode alterar os seus próprios atendimentos')
+}
+
+function assertCanTouchAppointment(appointmentId: string): void {
+  requireRole(...EVERYONE)
+  if (getCurrentStaffRole() !== 'professional') return
+  const appt = getDb().select().from(appointments).where(eq(appointments.id, appointmentId)).get()
+  if (!appt) throw new Error('Agendamento não encontrado')
+  assertCanTouchProfessional(appt.professionalId)
+}
+
 export function registerAppointmentHandlers(): void {
   ipcMain.handle('appointments:listByDate', (_e, dateIso: string): ApiResult<Appointment[]> => {
     try {
@@ -222,8 +242,29 @@ export function registerAppointmentHandlers(): void {
     }
   )
 
+  // Histórico de um paciente (todos os status), do mais recente para o mais antigo.
+  ipcMain.handle('appointments:listByPatient', (_e, patientId: string): ApiResult<Appointment[]> => {
+    try {
+      const db = getDb()
+      const rows = db
+        .select()
+        .from(appointments)
+        .leftJoin(patients, eq(appointments.patientId, patients.id))
+        .leftJoin(professionals, eq(appointments.professionalId, professionals.id))
+        .leftJoin(rooms, eq(appointments.roomId, rooms.id))
+        .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
+        .where(and(eq(appointments.patientId, patientId), isNull(appointments.deletedAt)))
+        .all()
+      const list = attachSales(rows.map(toAppointmentDto)).sort((a, b) => b.startAt.localeCompare(a.startAt))
+      return { ok: true, data: list }
+    } catch (error) {
+      return { ok: false, error: (error as Error).message }
+    }
+  })
+
   ipcMain.handle('appointments:create', (_e, input: AppointmentInput): ApiResult<Appointment> => {
     try {
+      assertCanTouchProfessional(input.professionalId)
       const clinicId = requireClinicId()
       return { ok: true, data: createAppointment(clinicId, input) }
     } catch (error) {
@@ -235,6 +276,7 @@ export function registerAppointmentHandlers(): void {
     'appointments:setStatus',
     (_e, params: { id: string; status: AppointmentStatus }): ApiResult<null> => {
       try {
+      assertCanTouchAppointment(params.id)
         const db = getDb()
         db.update(appointments)
           .set({ status: params.status, updatedAt: nowIso(), syncStatus: 'pending' })
@@ -253,6 +295,7 @@ export function registerAppointmentHandlers(): void {
     'appointments:complete',
     (_e, params: { id: string; usedItems: StockUsageItem[] }): ApiResult<null> => {
       try {
+      assertCanTouchAppointment(params.id)
         const clinicId = requireClinicId()
         const db = getDb()
         const staffMemberId = getCurrentStaffMemberId()

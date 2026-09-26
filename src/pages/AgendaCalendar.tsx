@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFeedback } from '../components/Feedback'
 import { Icon } from '../components/Icons'
+import { useClinic } from '../context/ClinicContext'
 import { NewAppointmentForm } from '../components/NewAppointmentForm'
 import { CompleteAppointmentModal } from '../components/CompleteAppointmentModal'
 import { ChargeModal } from '../components/ChargeModal'
@@ -70,6 +71,9 @@ function titleFor(view: CalendarView, cursor: Date): string {
 
 export function AgendaCalendar(): JSX.Element {
   const { toast, confirm } = useFeedback()
+  const { staff } = useClinic()
+  const isProfessional = staff.role === 'professional'
+  const [ownProfId, setOwnProfId] = useState<string | null>(null)
 
   const [view, setView] = useState<CalendarView>(() => loadPref<CalendarView>('agenda.view', 'day'))
   const [cursor, setCursor] = useState<Date>(() => fromDateStr(toDateStr(new Date())))
@@ -120,6 +124,7 @@ export function AgendaCalendar(): JSX.Element {
     window.api.patients.list().then((r) => r.ok && r.data && setPatients(r.data))
     window.api.procedureTypes.list().then((r) => r.ok && r.data && setProcedureTypes(r.data.filter((p) => p.active)))
     window.api.rooms.list().then((r) => r.ok && r.data && setRooms(r.data.filter((rm) => rm.active)))
+    window.api.staff.myProfessionalId().then((r) => r.ok && setOwnProfId(r.data ?? null))
   }, [])
 
   useEffect(() => {
@@ -137,6 +142,9 @@ export function AgendaCalendar(): JSX.Element {
   )
   const colorOf = useCallback((id: string) => colorMap.get(id) ?? '#2f9e6e', [colorMap])
 
+  // Profissional só marca e altera os próprios atendimentos (a agenda toda continua visível).
+  const canEdit = (professionalId: string): boolean => !isProfessional || professionalId === ownProfId
+  const formProfessionals = isProfessional ? professionals.filter((p) => p.id === ownProfId) : professionals
   const visibleProfessionals = professionals.filter((p) => !hiddenProfs.includes(p.id))
   const byProfessional = appointments.filter((a) => !hiddenProfs.includes(a.professionalId))
   const visible = byProfessional.filter((a) => !hiddenStatuses.includes(a.status))
@@ -183,7 +191,7 @@ export function AgendaCalendar(): JSX.Element {
     const minutes = Math.min(Math.max(base, DEFAULT_START_HOUR * 60), (DEFAULT_END_HOUR - 1) * 60 + 30)
     const time = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
     setFormError(null)
-    setFormSlot({ date: cursorStr, professionalId: (visibleProfessionals[0] ?? professionals[0])?.id ?? '', time })
+    setFormSlot({ date: cursorStr, professionalId: (isProfessional ? ownProfId : (visibleProfessionals[0] ?? professionals[0])?.id) ?? '', time })
   }
 
   function handleGridCreate(column: GridColumn, time: string): void {
@@ -191,7 +199,7 @@ export function AgendaCalendar(): JSX.Element {
     setPopover(null)
     setFormSlot({
       date: column.date,
-      professionalId: view === 'day' ? column.key : (visibleProfessionals[0]?.id ?? ''),
+      professionalId: isProfessional && ownProfId ? ownProfId : view === 'day' ? column.key : (visibleProfessionals[0]?.id ?? ''),
       time
     })
   }
@@ -440,6 +448,7 @@ export function AgendaCalendar(): JSX.Element {
           appt={popover.appt}
           anchor={popover.rect}
           color={colorOf(popover.appt.professionalId)}
+          canEdit={canEdit(popover.appt.professionalId)}
           onClose={() => setPopover(null)}
           onConfirm={() => changeStatus(popover.appt, 'confirmed', 'Agendamento confirmado')}
           onFinish={() => {
@@ -477,11 +486,12 @@ export function AgendaCalendar(): JSX.Element {
           date={formSlot.date}
           professionalId={formSlot.professionalId}
           time={formSlot.time}
-          professionals={professionals}
+          professionals={formProfessionals}
           patients={patients}
           procedureTypes={procedureTypes}
           rooms={rooms}
           error={formError}
+          onPatientCreated={(patient) => setPatients((prev) => [...prev, patient])}
           onCancel={() => {
             setFormSlot(null)
             setFormError(null)

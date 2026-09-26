@@ -33,6 +33,7 @@ export function requireRole(...allowed: StaffRole[]): StaffRole {
 
 export const MANAGERS: StaffRole[] = ['owner', 'admin']
 export const EVERYONE: StaffRole[] = ['owner', 'admin', 'professional', 'receptionist']
+export const NOT_PROFESSIONAL: StaffRole[] = ['owner', 'admin', 'receptionist']
 
 export function currentStaff(): { id: string | null; role: StaffRole | null } {
   return { id: getCurrentStaffMemberId(), role: getCurrentStaffRole() }

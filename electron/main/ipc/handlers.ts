@@ -176,6 +176,7 @@ export function registerIpcHandlers(): void {
         const db = getDb()
         const staff = db.select().from(staffMembers).where(eq(staffMembers.id, params.staffMemberId)).get()
         if (!staff) throw new Error('Funcionário não encontrado')
+        if (!staff.active || staff.deletedAt) throw new Error('Este usuário está inativo')
 
         const valid = bcrypt.compareSync(params.pin, staff.pinHash)
         if (!valid) throw new Error('PIN incorreto')

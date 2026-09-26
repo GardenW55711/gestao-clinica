@@ -11,6 +11,7 @@ const emptyItemInput: InventoryItemInput = { name: '', category: '', unit: 'unid
 export function Estoque(): JSX.Element {
   const { toast, confirm } = useFeedback()
   const { staff } = useClinic()
+  const canManageStock = staff.role !== 'professional' // profissional só dá baixa
   const [expensePreset, setExpensePreset] = useState<Partial<ExpenseInput> | null>(null)
   const [items, setItems] = useState<InventoryItemSummary[]>([])
   const [alerts, setAlerts] = useState<InventoryBatchAlert[]>([])
@@ -135,6 +136,7 @@ export function Estoque(): JSX.Element {
       )}
 
       <h2>Itens</h2>
+      {canManageStock && (
       <form className="inline-form" onSubmit={handleCreateItem}>
         <label>
           Nome
@@ -171,6 +173,7 @@ export function Estoque(): JSX.Element {
         </label>
         <button type="submit">Adicionar item</button>
       </form>
+      )}
       {itemError && <p className="error">{itemError}</p>}
 
       <table className="data-table">
@@ -233,9 +236,11 @@ export function Estoque(): JSX.Element {
           Motivo (só para saída)
           <input value={moveReason} onChange={(e) => setMoveReason(e.target.value)} />
         </label>
-        <button type="button" disabled={!moveItemId || !moveQuantity || moveLoading} onClick={handleEntry}>
-          Registrar entrada
-        </button>
+        {canManageStock && (
+          <button type="button" disabled={!moveItemId || !moveQuantity || moveLoading} onClick={handleEntry}>
+            Registrar entrada
+          </button>
+        )}
         <button type="button" disabled={!moveItemId || !moveQuantity || moveLoading} onClick={handleExit}>
           Registrar saída
         </button>

@@ -5,6 +5,7 @@ import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { getDb } from '../db/client'
 import { patients, professionals, rooms } from '../db/schema'
 import { getCurrentClinicId } from '../session'
+import { MANAGERS, requireRole } from './util'
 import type {
   ApiResult,
   Patient,
@@ -44,8 +45,13 @@ function registerCrud<Row extends Record<string, unknown>, Dto, Input>(opts: {
   toDto: (row: Row) => Dto
   toInsertValues: (id: string, clinicId: string, timestamp: string, input: Input) => Record<string, unknown>
   toUpdateValues: (timestamp: string, input: Input) => Record<string, unknown>
+  /** Se informado, só esses cargos podem criar, alterar e remover (listar é liberado). */
+  restrictWrites?: boolean
 }): void {
   const { prefix, table, toDto, toInsertValues, toUpdateValues } = opts
+  const guard = (): void => {
+    if (opts.restrictWrites) requireRole(...MANAGERS)
+  }
   const t = table as unknown as Record<string, never> & {
     id: never
     deletedAt: never
@@ -63,6 +69,7 @@ function registerCrud<Row extends Record<string, unknown>, Dto, Input>(opts: {
 
   ipcMain.handle(`${prefix}:create`, (_e, input: Input): ApiResult<Dto> => {
     try {
+      guard()
       const clinicId = requireClinicId()
       const db = getDb()
       const id = randomUUID()
@@ -79,6 +86,7 @@ function registerCrud<Row extends Record<string, unknown>, Dto, Input>(opts: {
 
   ipcMain.handle(`${prefix}:update`, (_e, params: { id: string; input: Input }): ApiResult<Dto> => {
     try {
+      guard()
       const db = getDb()
       db.update(table as never)
         .set(toUpdateValues(nowIso(), params.input) as never)
@@ -93,6 +101,7 @@ function registerCrud<Row extends Record<string, unknown>, Dto, Input>(opts: {
 
   ipcMain.handle(`${prefix}:remove`, (_e, id: string): ApiResult<null> => {
     try {
+      guard()
       const db = getDb()
       db.update(table as never)
         .set({ deletedAt: nowIso(), updatedAt: nowIso(), syncStatus: 'pending' } as never)
@@ -151,6 +160,7 @@ export function registerCatalogHandlers(): void {
 
   registerCrud<typeof professionals.$inferSelect, Professional, ProfessionalInput>({
     prefix: 'professionals',
+    restrictWrites: true,
     table: professionals,
     toDto: (row) => ({
       id: row.id,
@@ -185,6 +195,7 @@ export function registerCatalogHandlers(): void {
 
   registerCrud<typeof rooms.$inferSelect, Room, RoomInput>({
     prefix: 'rooms',
+    restrictWrites: true,
     table: rooms,
     toDto: (row) => ({ id: row.id, name: row.name, description: row.description, active: row.active }),
     toInsertValues: (id, clinicId, timestamp, input) => ({

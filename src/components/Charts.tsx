@@ -187,3 +187,99 @@ export function RankingBars({
     </ul>
   )
 }
+
+
+/** Fluxo de caixa: linhas de entradas, saídas e saldo acumulado ao longo do período. */
+export function CashflowChart({
+  points,
+  granularity
+}: {
+  points: { key: string; inCents: number; outCents: number; balanceCents: number }[]
+  granularity: 'day' | 'month'
+}): JSX.Element {
+  const [ref, width] = useElementWidth<HTMLDivElement>()
+  const [hover, setHover] = useState<number | null>(null)
+
+  const values = points.flatMap((p) => [p.inCents, p.outCents, p.balanceCents])
+  const maxV = niceMax(Math.max(0, ...values))
+  const minRaw = Math.min(0, ...values)
+  const minV = minRaw < 0 ? -niceMax(-minRaw) : 0
+  const span = maxV - minV || 1
+
+  const innerW = Math.max(width - PAD.left - PAD.right, 10)
+  const innerH = HEIGHT - PAD.top - PAD.bottom
+  const step = points.length > 1 ? innerW / (points.length - 1) : innerW
+  const xOf = (i: number): number => PAD.left + (points.length > 1 ? step * i : innerW / 2)
+  const yOf = (v: number): number => PAD.top + innerH - ((v - minV) / span) * innerH
+
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => minV + f * span)
+  const labelW = granularity === 'day' ? 46 : 58
+  const labelStep = Math.max(1, Math.ceil(labelW / Math.max(step, 1)))
+  const empty = points.every((p) => p.inCents === 0 && p.outCents === 0)
+
+  const line = (pick: (p: (typeof points)[number]) => number): string =>
+    points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)},${yOf(pick(p)).toFixed(1)}`).join(' ')
+
+  const hovered = hover !== null ? points[hover] : null
+
+  return (
+    <div className="chart" ref={ref} onMouseLeave={() => setHover(null)}>
+      {width > 0 && (
+        <svg width={width} height={HEIGHT} role="img" aria-label="Fluxo de caixa">
+          {ticks.map((t) => (
+            <g key={t}>
+              <line x1={PAD.left} x2={width - PAD.right} y1={yOf(t)} y2={yOf(t)} className={t === 0 ? 'chart-grid zero' : 'chart-grid'} />
+              <text x={PAD.left - 10} y={yOf(t) + 4} textAnchor="end" className="chart-axis">
+                {t === 0 ? 'R$ 0' : compact.format(t / 100)}
+              </text>
+            </g>
+          ))}
+
+          <path d={line((p) => p.inCents)} className="cf-line cf-in" />
+          <path d={line((p) => p.outCents)} className="cf-line cf-out" />
+          <path d={line((p) => p.balanceCents)} className="cf-line cf-balance" />
+
+          {points.map((p, i) => (
+            <g key={p.key} onMouseEnter={() => setHover(i)}>
+              <rect x={xOf(i) - Math.max(step, 8) / 2} y={PAD.top} width={Math.max(step, 8)} height={innerH} fill="transparent" />
+              {hover === i && (
+                <>
+                  <line x1={xOf(i)} x2={xOf(i)} y1={PAD.top} y2={PAD.top + innerH} className="cf-cursor" />
+                  <circle cx={xOf(i)} cy={yOf(p.balanceCents)} r={4} className="cf-dot cf-balance" />
+                </>
+              )}
+              {i % labelStep === 0 && (
+                <text x={xOf(i)} y={HEIGHT - 8} textAnchor="middle" className="chart-axis">
+                  {axisLabel(p.key, granularity)}
+                </text>
+              )}
+            </g>
+          ))}
+        </svg>
+      )}
+
+      {empty && width > 0 && <div className="chart-empty">Sem movimentação no período</div>}
+
+      {hovered && (
+        <div className="chart-tooltip" style={{ left: Math.min(Math.max(xOf(hover ?? 0), 100), Math.max(width - 100, 100)) }}>
+          <strong>{tooltipTitle(hovered.key, granularity)}</strong>
+          <span className="cf-in-text">Entrou {formatCurrency(hovered.inCents)}</span>
+          <span className="cf-out-text">Saiu {formatCurrency(hovered.outCents)}</span>
+          <small>Saldo acumulado {formatCurrency(hovered.balanceCents)}</small>
+        </div>
+      )}
+
+      <div className="cf-legend">
+        <span>
+          <i className="cf-in" /> Entradas
+        </span>
+        <span>
+          <i className="cf-out" /> Saídas
+        </span>
+        <span>
+          <i className="cf-balance" /> Saldo acumulado
+        </span>
+      </div>
+    </div>
+  )
+}
