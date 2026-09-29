@@ -2508,7 +2508,8 @@ button {
 
 /* Abas dentro de uma página (Financeiro, Cadastros, Agenda) */
 .subtabs {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: nowrap;
   gap: 4px;
   padding: 4px;
   margin: 2px 0 16px;
@@ -2516,11 +2517,15 @@ button {
   background: var(--glass-strong);
   border: 1px solid var(--glass-border);
   align-self: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .subtab {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
   gap: 8px;
   padding: 8px 16px;
   border-radius: 12px;
@@ -3391,4 +3396,116 @@ a.tile.home-goal .be-numbers > span {
 a.tile.home-goal .be-numbers {
   display: flex;
   gap: 40px;
+}
+
+/* ============ Fase 2 / Etapa A: alertas, CRO, odontograma (base), dados da clínica ============ */
+
+.alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: rgba(220, 80, 70, 0.14);
+  border: 1px solid rgba(220, 80, 70, 0.3);
+  color: var(--danger);
+}
+
+.alert-banner .icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.alert-banner ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.alert-banner li.grave::before {
+  content: '● ';
+}
+
+.alert-list {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alert-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+}
+
+.alert-list li.inactive {
+  opacity: 0.55;
+}
+
+.alert-list .alert-text {
+  flex: 1;
+  font-size: 14px;
+}
+
+.alert-list .link-button {
+  margin: 0;
+}
+
+/* Alerta na agenda (bloco do dia/semana e chip do mês) */
+.appt-alert {
+  color: var(--warn-border, #d69e1e);
+  flex-shrink: 0;
+}
+
+.appt-alert.grave {
+  color: var(--danger);
+}
+
+/* Dados da clínica (logo + endereço) */
+.clinic-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.clinic-logo-preview {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.clinic-logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.file-btn {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.file-btn input[type='file'] {
+  display: none;
 }

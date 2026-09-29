@@ -15,6 +15,7 @@ import { signInClinic, signUpClinic } from '../supabase/client'
 import { syncClinicAndStaff } from '../sync/engine'
 import { recoverClinicFromCloud } from '../sync/recover'
 import { setCurrentSession, getCurrentClinicId, setCurrentStaffMember } from '../session'
+import { hasClinicalAccess } from './util'
 import type { ApiResult, ClinicLoginResult, ClinicSetupInput, ClinicRecoverInput, StaffSummary } from '@shared/types'
 
 function nowIso(): string {
@@ -43,10 +44,16 @@ function loadClinicLoginResult(): ClinicLoginResult {
   if (!clinic) throw new Error('Clínica não encontrada no banco local')
 
   const staff = db
-    .select({ id: staffMembers.id, name: staffMembers.name, role: staffMembers.role })
+    .select({
+      id: staffMembers.id,
+      name: staffMembers.name,
+      role: staffMembers.role,
+      clinicalAccess: staffMembers.clinicalAccess
+    })
     .from(staffMembers)
     .where(and(eq(staffMembers.active, true), isNull(staffMembers.deletedAt)))
     .all()
+    .map((s) => ({ ...s, clinicalAccess: s.role === 'owner' || s.role === 'professional' || s.clinicalAccess }))
 
   return { clinicName: clinic.name, staff: staff as StaffSummary[] }
 }
@@ -184,7 +191,7 @@ export function registerIpcHandlers(): void {
         writeAudit(staff.clinicId, staff.id, 'staff_login', 'staff_members')
         setCurrentStaffMember(staff.id, staff.role)
 
-        return { ok: true, data: { id: staff.id, name: staff.name, role: staff.role } }
+        return { ok: true, data: { id: staff.id, name: staff.name, role: staff.role, clinicalAccess: hasClinicalAccess() } }
       } catch (error) {
         return { ok: false, error: (error as Error).message }
       }

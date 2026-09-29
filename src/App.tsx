@@ -10,7 +10,13 @@ import { AgendaCalendar } from './pages/AgendaCalendar'
 import { OnlineRequests } from './pages/OnlineRequests'
 import { Patients } from './pages/Patients'
 import { PatientFile } from './pages/patients/PatientFile'
-import { PatientData } from './pages/patients/PatientData'
+import { PatientSummary } from './pages/patients/PatientSummary'
+import { PatientAnamnesis } from './pages/patients/PatientAnamnesis'
+import { PatientOdontogram } from './pages/patients/PatientOdontogram'
+import { PatientTreatmentPlan } from './pages/patients/PatientTreatmentPlan'
+import { PatientEvolution } from './pages/patients/PatientEvolution'
+import { PatientImages } from './pages/patients/PatientImages'
+import { PatientDocuments } from './pages/patients/PatientDocuments'
 import { PatientAppointments } from './pages/patients/PatientAppointments'
 import { PatientFinance } from './pages/patients/PatientFinance'
 import { Professionals } from './pages/Professionals'
@@ -30,6 +36,7 @@ import { Horarios } from './pages/configuracoes/Horarios'
 import { Bloqueios } from './pages/configuracoes/Bloqueios'
 import { Taxas } from './pages/configuracoes/Taxas'
 import { Funcionarios } from './pages/configuracoes/Funcionarios'
+import { DadosClinica } from './pages/configuracoes/DadosClinica'
 import { ClinicContext } from './context/ClinicContext'
 import type { ClinicLoginResult, StaffSummary } from '@shared/types'
 
@@ -101,7 +108,13 @@ function App(): JSX.Element {
             </Route>
             <Route path="/patients" element={<Patients />} />
             <Route path="/patients/:id" element={<PatientFile />}>
-              <Route index element={<PatientData />} />
+              <Route index element={<PatientSummary />} />
+              <Route path="anamnese" element={<PatientAnamnesis />} />
+              <Route path="odontograma" element={<PatientOdontogram />} />
+              <Route path="plano" element={<PatientTreatmentPlan />} />
+              <Route path="evolucao" element={<PatientEvolution />} />
+              <Route path="imagens" element={<PatientImages />} />
+              <Route path="documentos" element={<PatientDocuments />} />
               <Route path="atendimentos" element={<PatientAppointments />} />
               <Route path="financeiro" element={<PatientFinance />} />
             </Route>
@@ -129,6 +142,7 @@ function App(): JSX.Element {
               <Route path="bloqueios" element={<Bloqueios />} />
               <Route path="taxas" element={<Taxas />} />
               <Route path="funcionarios" element={<Funcionarios />} />
+              <Route path="clinica" element={<DadosClinica />} />
             </Route>
           </Route>
         </Routes>

@@ -1,4 +1,5 @@
 import { KeyboardEvent, MouseEvent, useEffect, useRef, useState } from 'react'
+import { alertsSummaryText, hasGraveAlert } from '@shared/alerts'
 import type { Appointment } from '@shared/types'
 import {
   HOUR_PX,
@@ -204,6 +205,14 @@ export function TimeGrid({
                     >
                       <div className="appt-title">
                         {appt.status === 'completed' && <Icon name="check" size={13} />}
+                        {appt.patientAlerts.length > 0 && (
+                          <span
+                            className={hasGraveAlert(appt.patientAlerts) ? 'appt-alert grave' : 'appt-alert'}
+                            title={alertsSummaryText(appt.patientAlerts)}
+                          >
+                            <Icon name="alert" size={13} />
+                          </span>
+                        )}
                         <span>{appt.patientName}</span>
                       </div>
                       {height >= 40 && (

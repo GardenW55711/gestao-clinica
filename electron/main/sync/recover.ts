@@ -20,7 +20,8 @@ import {
   installments,
   expenses,
   professionalWorkingHours,
-  scheduleBlocks
+  scheduleBlocks,
+  patientAlerts
 } from '../db/schema'
 import { eq, isNull } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
@@ -96,6 +97,8 @@ export async function recoverClinicFromCloud(params: {
         cardFeeDebitPercent: Number(cloudClinic.card_fee_debit_percent ?? 0),
         cardFeeCreditPercent: Number(cloudClinic.card_fee_credit_percent ?? 0),
         cardFeeCreditInstallmentPercent: Number(cloudClinic.card_fee_credit_installment_percent ?? 0),
+        address: cloudClinic.address ?? null,
+        phone: cloudClinic.phone ?? null,
         createdAt: cloudClinic.created_at,
         updatedAt: cloudClinic.updated_at
       })
@@ -108,6 +111,7 @@ export async function recoverClinicFromCloud(params: {
       role: r.role,
       pinHash: r.pin_hash,
       active: r.active,
+      clinicalAccess: r.clinical_access ?? false,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
       syncStatus: 'synced',
@@ -138,6 +142,8 @@ export async function recoverClinicFromCloud(params: {
       specialty: r.specialty,
       color: r.color,
       commissionPercent: Number(r.commission_percent ?? 0),
+      croNumber: r.cro_number ?? null,
+      croUf: r.cro_uf ?? null,
       active: r.active,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -165,6 +171,8 @@ export async function recoverClinicFromCloud(params: {
       defaultPriceCents: centsFrom(r.default_price_cents, r.default_price),
       requiresRoom: r.requires_room,
       bookableOnline: r.bookable_online,
+      scope: r.scope ?? 'nenhum',
+      odontogramCondition: r.odontogram_condition ?? null,
       active: r.active,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -378,6 +386,25 @@ export async function recoverClinicFromCloud(params: {
           startAt: r.start_at,
           endAt: r.end_at,
           reason: r.reason,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          syncStatus: 'synced',
+          deletedAt: r.deleted_at
+        })
+      ],
+      [
+        'patient_alerts',
+        patientAlerts,
+        'patient_alerts',
+        (r) => ({
+          id: r.id,
+          clinicId: r.clinic_id,
+          patientId: r.patient_id,
+          text: r.text,
+          severity: r.severity,
+          origin: r.origin,
+          sourceRecordId: r.source_record_id,
+          active: r.active,
           createdAt: r.created_at,
           updatedAt: r.updated_at,
           syncStatus: 'synced',

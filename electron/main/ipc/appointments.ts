@@ -6,6 +6,7 @@ import { appointments, patients, professionals, rooms, procedureTypes, sales } f
 import { getCurrentClinicId, getCurrentStaffMemberId, getCurrentStaffRole } from '../session'
 import { EVERYONE, requireRole } from './util'
 import { ownProfessionalId } from './sales'
+import { activeAlertsByPatient } from './patientAlerts'
 import { consumeInventoryFefo } from '../inventory/fefo'
 import { checkScheduleAllowed } from './schedule'
 import type { ApiResult, Appointment, AppointmentInput, AppointmentStatus, StockUsageItem } from '@shared/types'
@@ -136,7 +137,7 @@ export function createAppointment(
     .where(eq(appointments.id, id))
     .get()!
 
-  return toAppointmentDto(row)
+  return attachAlerts([toAppointmentDto(row)])[0]
 }
 
 function toAppointmentDto(row: {
@@ -161,8 +162,16 @@ function toAppointmentDto(row: {
     status: row.appointments.status as AppointmentStatus,
     notes: row.appointments.notes,
     saleId: null,
-    saleStatus: null
+    saleStatus: null,
+    patientAlerts: []
   }
+}
+
+/** Preenche os alertas de saúde ativos de cada paciente (pra agenda avisar sem abrir a ficha). */
+function attachAlerts(list: Appointment[]): Appointment[] {
+  if (list.length === 0) return list
+  const byPatient = activeAlertsByPatient([...new Set(list.map((a) => a.patientId))])
+  return list.map((a) => ({ ...a, patientAlerts: byPatient.get(a.patientId) ?? [] }))
 }
 
 /** Marca em cada atendimento a cobrança ligada a ele (a que não foi cancelada). */
@@ -212,7 +221,7 @@ export function registerAppointmentHandlers(): void {
         .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
         .where(and(gte(appointments.startAt, start), lt(appointments.startAt, end), isNull(appointments.deletedAt)))
         .all()
-      return { ok: true, data: attachSales(rows.map(toAppointmentDto)) }
+      return { ok: true, data: attachAlerts(attachSales(rows.map(toAppointmentDto))) }
     } catch (error) {
       return { ok: false, error: (error as Error).message }
     }
@@ -235,7 +244,7 @@ export function registerAppointmentHandlers(): void {
           .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
           .where(and(gte(appointments.startAt, start), lt(appointments.startAt, end), isNull(appointments.deletedAt)))
           .all()
-        return { ok: true, data: attachSales(rows.map(toAppointmentDto)) }
+        return { ok: true, data: attachAlerts(attachSales(rows.map(toAppointmentDto))) }
       } catch (error) {
         return { ok: false, error: (error as Error).message }
       }
@@ -255,7 +264,7 @@ export function registerAppointmentHandlers(): void {
         .leftJoin(procedureTypes, eq(appointments.procedureTypeId, procedureTypes.id))
         .where(and(eq(appointments.patientId, patientId), isNull(appointments.deletedAt)))
         .all()
-      const list = attachSales(rows.map(toAppointmentDto)).sort((a, b) => b.startAt.localeCompare(a.startAt))
+      const list = attachAlerts(attachSales(rows.map(toAppointmentDto))).sort((a, b) => b.startAt.localeCompare(a.startAt))
       return { ok: true, data: list }
     } catch (error) {
       return { ok: false, error: (error as Error).message }

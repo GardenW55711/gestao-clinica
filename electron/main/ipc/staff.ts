@@ -25,7 +25,8 @@ function toDto(row: typeof staffMembers.$inferSelect): StaffMember {
     name: row.name,
     role: row.role,
     active: row.active,
-    professionalId: professionalLinkOf(row.id)
+    professionalId: professionalLinkOf(row.id),
+    clinicalAccess: row.role === 'owner' || row.role === 'professional' ? true : row.clinicalAccess
   }
 }
 
@@ -72,6 +73,9 @@ export function registerStaffHandlers(): void {
     if (!input.name.trim()) throw new Error('Informe o nome')
     assertCanAssign(input.role)
     if (!input.pin || !PIN_RX.test(input.pin)) throw new Error('O PIN deve ter de 4 a 8 números')
+    if (input.role === 'admin' && getCurrentStaffRole() !== 'owner') {
+      throw new Error('Só o dono decide o acesso clínico de um administrador')
+    }
     const id = randomUUID()
     const timestamp = nowIso()
     getDb()
@@ -83,6 +87,7 @@ export function registerStaffHandlers(): void {
         role: input.role,
         pinHash: bcrypt.hashSync(input.pin, 10),
         active: true,
+        clinicalAccess: input.role === 'admin' ? Boolean(input.clinicalAccess) : false,
         createdAt: timestamp,
         updatedAt: timestamp,
         syncStatus: 'pending',
@@ -113,11 +118,19 @@ export function registerStaffHandlers(): void {
     }
     if (input.pin && !PIN_RX.test(input.pin)) throw new Error('O PIN deve ter de 4 a 8 números')
 
+    const nextRole = isOwner ? 'owner' : input.role
     db.update(staffMembers)
       .set({
         name: input.name.trim(),
-        role: isOwner ? 'owner' : input.role,
+        role: nextRole,
         active: input.active ?? current.active,
+        // Acesso clínico só existe de fato para admin, e só o dono decide.
+        clinicalAccess:
+          nextRole === 'admin' && getCurrentStaffRole() === 'owner' && input.clinicalAccess !== undefined
+            ? input.clinicalAccess
+            : nextRole === 'admin'
+              ? current.clinicalAccess
+              : false,
         ...(input.pin ? { pinHash: bcrypt.hashSync(input.pin, 10) } : {}),
         updatedAt: nowIso(),
         syncStatus: 'pending'

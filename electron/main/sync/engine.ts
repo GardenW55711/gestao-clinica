@@ -21,7 +21,8 @@ import {
   installments,
   expenses,
   professionalWorkingHours,
-  scheduleBlocks
+  scheduleBlocks,
+  patientAlerts
 } from '../db/schema'
 
 /**
@@ -94,26 +95,40 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       ...clinicRow,
       card_fee_debit_percent: clinic.cardFeeDebitPercent,
       card_fee_credit_percent: clinic.cardFeeCreditPercent,
-      card_fee_credit_installment_percent: clinic.cardFeeCreditInstallmentPercent
+      card_fee_credit_installment_percent: clinic.cardFeeCreditInstallmentPercent,
+      address: clinic.address,
+      phone: clinic.phone
     })
-    // Nuvem ainda sem as colunas de taxa (schema.sql não atualizado): envia o básico.
-    if (clinicError && /card_fee/.test(clinicError.message)) {
-      console.warn('[sync] taxas de cartão aguardando atualização da nuvem')
+    // Nuvem ainda sem as colunas novas (schema.sql não atualizado): envia o básico.
+    if (clinicError && /(card_fee|address|phone)/.test(clinicError.message)) {
+      console.warn('[sync] endereço/telefone/taxas aguardando atualização da nuvem')
       ;({ error: clinicError } = await supabase.from('clinics').upsert(clinicRow))
     }
     if (clinicError) throw new Error(`clinics: ${clinicError.message}`)
 
-    await pushPendingTable(supabase, staffMembers, 'staff_members', (row) => ({
-      id: row.id,
-      clinic_id: row.clinicId,
-      name: row.name,
-      role: row.role,
-      pin_hash: row.pinHash,
-      active: row.active,
-      created_at: row.createdAt,
-      updated_at: row.updatedAt,
-      deleted_at: row.deletedAt
-    }))
+    {
+      const staffRow = (row: Record<string, unknown>): Record<string, unknown> => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        name: row.name,
+        role: row.role,
+        pin_hash: row.pinHash,
+        active: row.active,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      })
+      try {
+        await pushPendingTable(supabase, staffMembers, 'staff_members', (row) => ({
+          ...staffRow(row),
+          clinical_access: row.clinicalAccess
+        }))
+      } catch (error) {
+        if (!/clinical_access/.test((error as Error).message)) throw error
+        console.warn('[sync] acesso clínico do funcionário aguardando atualização da nuvem')
+        await pushPendingTable(supabase, staffMembers, 'staff_members', staffRow)
+      }
+    }
 
     await pushPendingTable(supabase, patients, 'patients', (row) => ({
       id: row.id,
@@ -146,12 +161,14 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       try {
         await pushPendingTable(supabase, professionals, 'professionals', (row) => ({
           ...professionalRow(row),
-          commission_percent: row.commissionPercent
+          commission_percent: row.commissionPercent,
+          cro_number: row.croNumber,
+          cro_uf: row.croUf
         }))
       } catch (error) {
-        if (!/commission_percent/.test((error as Error).message)) throw error
-        // Nuvem sem a coluna de comissão: envia sem ela (a comissão sobe depois de rodar o schema.sql).
-        console.warn('[sync] comissão aguardando atualização da nuvem')
+        if (!/(commission_percent|cro_number|cro_uf)/.test((error as Error).message)) throw error
+        // Nuvem sem essas colunas: envia sem elas (sobem depois de rodar o schema.sql).
+        console.warn('[sync] comissão/CRO aguardando atualização da nuvem')
         await pushPendingTable(supabase, professionals, 'professionals', professionalRow)
       }
     }
@@ -167,19 +184,36 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
       deleted_at: row.deletedAt
     }))
 
-    await pushMoneyTable('procedure_types', () => pushPendingTable(supabase, procedureTypes, 'procedure_types', (row) => ({
-      id: row.id,
-      clinic_id: row.clinicId,
-      name: row.name,
-      duration_minutes: row.durationMinutes,
-      default_price_cents: row.defaultPriceCents,
-      requires_room: row.requiresRoom,
-      bookable_online: row.bookableOnline,
-      active: row.active,
-      created_at: row.createdAt,
-      updated_at: row.updatedAt,
-      deleted_at: row.deletedAt
-    })))
+    {
+      const procedureTypeRow = (row: Record<string, unknown>): Record<string, unknown> => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        name: row.name,
+        duration_minutes: row.durationMinutes,
+        default_price_cents: row.defaultPriceCents,
+        requires_room: row.requiresRoom,
+        bookable_online: row.bookableOnline,
+        active: row.active,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      })
+      try {
+        await pushPendingTable(supabase, procedureTypes, 'procedure_types', (row) => ({
+          ...procedureTypeRow(row),
+          scope: row.scope,
+          odontogram_condition: row.odontogramCondition
+        }))
+      } catch (error) {
+        if (!/(scope|odontogram_condition|default_price_cents)/.test((error as Error).message)) throw error
+        console.warn('[sync] procedure_types aguardando atualização da nuvem (tenta sem os campos novos)')
+        try {
+          await pushPendingTable(supabase, procedureTypes, 'procedure_types', procedureTypeRow)
+        } catch (inner) {
+          console.warn('[sync] procedure_types ainda aguardando atualização da nuvem:', (inner as Error).message)
+        }
+      }
+    }
 
     await pushPendingTable(supabase, appointments, 'appointments', (row) => ({
       id: row.id,
@@ -369,6 +403,22 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
     } catch (error) {
       console.warn('[sync] produtos do procedimento ainda não sincronizados:', (error as Error).message)
     }
+
+    await pushMoneyTable('patient_alerts', () =>
+      pushPendingTable(supabase, patientAlerts, 'patient_alerts', (row) => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        patient_id: row.patientId,
+        text: row.text,
+        severity: row.severity,
+        origin: row.origin,
+        source_record_id: row.sourceRecordId,
+        active: row.active,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      }))
+    )
 
     await pullNewBookingRequests(supabase, clinicId)
 

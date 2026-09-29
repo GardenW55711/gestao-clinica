@@ -43,7 +43,10 @@ import type {
   OverviewData,
   ReportsData,
   ProductionRow,
-  DashboardSummary
+  DashboardSummary,
+  ClinicProfileInput,
+  PatientAlert,
+  PatientAlertInput
 } from '@shared/types'
 import type { Range } from '@shared/indicators'
 
@@ -163,7 +166,17 @@ const api = {
     get: (): Promise<ApiResult<ClinicSettings>> => ipcRenderer.invoke('clinic:getSettings'),
     setCardFees: (fees: CardFees): Promise<ApiResult<null>> => ipcRenderer.invoke('clinic:setCardFees', fees),
     setSelfBooking: (enabled: boolean): Promise<ApiResult<null>> =>
-      ipcRenderer.invoke('clinic:setSelfBooking', enabled)
+      ipcRenderer.invoke('clinic:setSelfBooking', enabled),
+    setProfile: (input: ClinicProfileInput): Promise<ApiResult<null>> => ipcRenderer.invoke('clinic:setProfile', input),
+    setLogo: (dataUrl: string | null): Promise<ApiResult<null>> => ipcRenderer.invoke('clinic:setLogo', dataUrl),
+    getLogoDataUrl: (): Promise<ApiResult<string | null>> => ipcRenderer.invoke('clinic:getLogoDataUrl')
+  },
+  patientAlerts: {
+    list: (patientId: string): Promise<ApiResult<PatientAlert[]>> => ipcRenderer.invoke('patientAlerts:list', patientId),
+    create: (input: PatientAlertInput): Promise<ApiResult<PatientAlert>> =>
+      ipcRenderer.invoke('patientAlerts:create', input),
+    setActive: (id: string, active: boolean): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('patientAlerts:setActive', { id, active })
   },
   procedureTypeBookable: (id: string, enabled: boolean): Promise<ApiResult<null>> =>
     ipcRenderer.invoke('procedureTypes:setBookableOnline', { id, enabled }),

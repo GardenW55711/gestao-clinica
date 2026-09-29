@@ -1,12 +1,20 @@
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
 import { randomUUID } from 'crypto'
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
+import { join } from 'path'
 import { and, eq, isNull } from 'drizzle-orm'
 import { getDb } from '../db/client'
 import { clinics, procedureTypes, professionals, patients, bookingRequests } from '../db/schema'
 import { getCurrentClinicId } from '../session'
 import { createAppointment } from './appointments'
 import { MANAGERS, NOT_PROFESSIONAL, handle, requireRole } from './util'
-import type { ApiResult, CardFees, ClinicSettings, BookingRequestSummary } from '@shared/types'
+import type { ApiResult, CardFees, ClinicProfileInput, ClinicSettings, BookingRequestSummary } from '@shared/types'
+
+const LOGO_MIME_BY_EXT: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' }
+
+function logoFullPath(filename: string): string {
+  return join(app.getPath('userData'), filename)
+}
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -34,12 +42,59 @@ export function registerBookingHandlers(): void {
             debitPercent: clinic.cardFeeDebitPercent,
             creditPercent: clinic.cardFeeCreditPercent,
             creditInstallmentPercent: clinic.cardFeeCreditInstallmentPercent
-          }
+          },
+          address: clinic.address,
+          phone: clinic.phone,
+          logoPath: clinic.logoPath
         }
       }
     } catch (error) {
       return { ok: false, error: (error as Error).message }
     }
+  })
+
+  // Endereço e telefone para o cabeçalho dos documentos em PDF (Fase 2).
+  handle('clinic:setProfile', MANAGERS, (input: ClinicProfileInput): null => {
+    getDb()
+      .update(clinics)
+      .set({ address: input.address?.trim() || null, phone: input.phone?.trim() || null, updatedAt: nowIso() })
+      .run()
+    return null
+  })
+
+  // Logo opcional da clínica: guardado como arquivo na pasta de dados do app
+  // (não é dado sensível de paciente, então não precisa ir pro bucket privado do Storage).
+  handle('clinic:setLogo', MANAGERS, (dataUrl: string | null): null => {
+    const db = getDb()
+    const current = db.select({ logoPath: clinics.logoPath }).from(clinics).get()
+    if (current?.logoPath && existsSync(logoFullPath(current.logoPath))) {
+      try {
+        unlinkSync(logoFullPath(current.logoPath))
+      } catch {
+        // não é crítico se o arquivo antigo não puder ser apagado agora
+      }
+    }
+    if (!dataUrl) {
+      db.update(clinics).set({ logoPath: null, updatedAt: nowIso() }).run()
+      return null
+    }
+    const match = /^data:image\/(png|jpe?g);base64,(.+)$/i.exec(dataUrl)
+    if (!match) throw new Error('Envie uma imagem PNG ou JPG')
+    const ext = match[1].toLowerCase() === 'jpg' ? 'jpeg' : match[1].toLowerCase()
+    const filename = `clinic-logo-${Date.now()}.${ext}`
+    writeFileSync(logoFullPath(filename), Buffer.from(match[2], 'base64'))
+    db.update(clinics).set({ logoPath: filename, updatedAt: nowIso() }).run()
+    return null
+  })
+
+  handle('clinic:getLogoDataUrl', null, (): string | null => {
+    const clinic = getDb().select({ logoPath: clinics.logoPath }).from(clinics).get()
+    if (!clinic?.logoPath) return null
+    const path = logoFullPath(clinic.logoPath)
+    if (!existsSync(path)) return null
+    const ext = clinic.logoPath.split('.').pop() ?? ''
+    const mime = LOGO_MIME_BY_EXT[ext] ?? 'application/octet-stream'
+    return `data:${mime};base64,${readFileSync(path).toString('base64')}`
   })
 
   // Taxas da maquininha (em %): valem para os recebimentos feitos daqui em diante.

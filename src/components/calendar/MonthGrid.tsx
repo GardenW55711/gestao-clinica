@@ -1,5 +1,7 @@
+import { alertsSummaryText, hasGraveAlert } from '@shared/alerts'
 import type { Appointment } from '@shared/types'
 import { addDays, formatClock, monthGrid, startOfMonth, toDateStr } from '../../utils/calendar'
+import { Icon } from '../Icons'
 
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const MAX_CHIPS = 3
@@ -54,6 +56,7 @@ export function MonthGrid({ month, appointments, todayStr, colorOf, onOpenDay, o
                     tabIndex={0}
                     className={`month-chip status-${appt.status}`}
                     style={{ ['--prof' as string]: colorOf(appt.professionalId) }}
+                    title={appt.patientAlerts.length > 0 ? alertsSummaryText(appt.patientAlerts) : undefined}
                     onClick={(e) => {
                       e.stopPropagation()
                       onOpenAppt(appt, e.currentTarget.getBoundingClientRect())
@@ -63,6 +66,9 @@ export function MonthGrid({ month, appointments, todayStr, colorOf, onOpenDay, o
                     }}
                   >
                     <span className="time">{formatClock(appt.startAt)}</span>
+                    {appt.patientAlerts.length > 0 && (
+                      <Icon name="alert" size={11} className={hasGraveAlert(appt.patientAlerts) ? 'appt-alert grave' : 'appt-alert'} />
+                    )}
                     <span className="who">{appt.patientName.split(' ')[0]}</span>
                   </div>
                 ))}

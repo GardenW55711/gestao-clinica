@@ -1,9 +1,12 @@
 import { FormEvent, useState } from 'react'
-import type { InventoryItemSummary, ProcedureType } from '@shared/types'
+import type { ProcedureScope, InventoryItemSummary, ProcedureType } from '@shared/types'
 import { centsToInput, parseMoneyInput } from '@shared/money'
+import { ODONTOGRAM_CONDITIONS, PROCEDURE_SCOPE_LABELS } from '@shared/odontogram'
 import { useEscapeKey } from '../utils/useEscapeKey'
 import { Icon } from './Icons'
 import { ItemPicker } from './ItemPicker'
+
+const SCOPES = Object.keys(PROCEDURE_SCOPE_LABELS) as ProcedureScope[]
 
 interface Row {
   inventoryItemId: string
@@ -25,6 +28,8 @@ export function ProcedureFormModal({ procedure, inventory, onClose, onSaved }: P
   const [duration, setDuration] = useState(String(procedure?.durationMinutes ?? 30))
   const [price, setPrice] = useState(centsToInput(procedure?.defaultPriceCents ?? 0))
   const [requiresRoom, setRequiresRoom] = useState(procedure?.requiresRoom ?? false)
+  const [scope, setScope] = useState<ProcedureScope>(procedure?.scope ?? 'nenhum')
+  const [odontogramCondition, setOdontogramCondition] = useState(procedure?.odontogramCondition ?? '')
   const [rows, setRows] = useState<Row[]>(
     (procedure?.items ?? []).map((i) => ({
       inventoryItemId: i.inventoryItemId,
@@ -55,6 +60,8 @@ export function ProcedureFormModal({ procedure, inventory, onClose, onSaved }: P
       durationMinutes: Number(duration),
       defaultPriceCents: parseMoneyInput(price),
       requiresRoom,
+      scope,
+      odontogramCondition: odontogramCondition || null,
       items
     }
 
@@ -114,6 +121,30 @@ export function ProcedureFormModal({ procedure, inventory, onClose, onSaved }: P
           <input type="checkbox" checked={requiresRoom} onChange={(e) => setRequiresRoom(e.target.checked)} />
           Precisa de sala
         </label>
+
+        <div className="form-row">
+          <label>
+            Uso no odontograma
+            <select value={scope} onChange={(e) => setScope(e.target.value as ProcedureScope)}>
+              {SCOPES.map((s) => (
+                <option key={s} value={s}>
+                  {PROCEDURE_SCOPE_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Marca automaticamente ao concluir
+            <select value={odontogramCondition} onChange={(e) => setOdontogramCondition(e.target.value)}>
+              <option value="">— não marca nada —</option>
+              {ODONTOGRAM_CONDITIONS.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <section className="modal-section">
           <h3>Produtos utilizados</h3>

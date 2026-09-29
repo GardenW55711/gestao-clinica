@@ -39,6 +39,7 @@ function StaffModal({
   const [pin, setPin] = useState('')
   const [active, setActive] = useState(member?.active ?? true)
   const [professionalId, setProfessionalId] = useState(member?.professionalId ?? '')
+  const [clinicalAccess, setClinicalAccess] = useState(member?.clinicalAccess ?? false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -51,7 +52,8 @@ function StaffModal({
       role,
       pin: pin || undefined,
       active,
-      professionalId: role === 'professional' ? professionalId || null : null
+      professionalId: role === 'professional' ? professionalId || null : null,
+      clinicalAccess
     }
     setSaving(true)
     const result = member
@@ -100,6 +102,13 @@ function StaffModal({
               ))}
             </select>
             <small className="muted">Liga este usuário à agenda dele: é assim que o programa sabe quais atendimentos são “os seus”.</small>
+          </label>
+        )}
+
+        {role === 'admin' && canMakeAdmin && (
+          <label className="switch-row compact">
+            <input type="checkbox" checked={clinicalAccess} onChange={(e) => setClinicalAccess(e.target.checked)} />
+            Acesso clínico (anamnese, odontograma, plano, evolução e imagens)
           </label>
         )}
 
@@ -179,6 +188,7 @@ export function Funcionarios(): JSX.Element {
             <th>Nome</th>
             <th>Cargo</th>
             <th>Profissional da agenda</th>
+            <th>Acesso clínico</th>
             <th>Situação</th>
             <th />
           </tr>
@@ -192,6 +202,7 @@ export function Funcionarios(): JSX.Element {
                 </td>
                 <td>{ROLE_LABELS[m.role]}</td>
                 <td>{m.role === 'professional' ? professionalName(m.professionalId) : '—'}</td>
+                <td>{m.role === 'admin' ? (m.clinicalAccess ? 'Sim' : 'Não') : '—'}</td>
                 <td>
                   <span className={`sale-chip ${m.active ? 'paga' : 'cancelada'}`}>{m.active ? 'Ativo' : 'Inativo'}</span>
                 </td>

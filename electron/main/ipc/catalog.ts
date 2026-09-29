@@ -168,6 +168,8 @@ export function registerCatalogHandlers(): void {
       specialty: row.specialty,
       color: row.color,
       commissionPercent: row.commissionPercent,
+      croNumber: row.croNumber,
+      croUf: row.croUf,
       active: row.active
     }),
     toInsertValues: (id, clinicId, timestamp, input) => ({
@@ -177,6 +179,8 @@ export function registerCatalogHandlers(): void {
       specialty: input.specialty ?? null,
       color: input.color ?? null,
       commissionPercent: validCommission(input.commissionPercent),
+      croNumber: input.croNumber?.trim() || null,
+      croUf: input.croUf?.trim().toUpperCase() || null,
       active: true,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -188,6 +192,8 @@ export function registerCatalogHandlers(): void {
       specialty: input.specialty ?? null,
       color: input.color ?? null,
       commissionPercent: validCommission(input.commissionPercent),
+      croNumber: input.croNumber?.trim() || null,
+      croUf: input.croUf?.trim().toUpperCase() || null,
       updatedAt: timestamp,
       syncStatus: 'pending'
     })

@@ -23,6 +23,10 @@ export const clinics = sqliteTable('clinics', {
   cardFeeDebitPercent: real('card_fee_debit_percent').notNull().default(0),
   cardFeeCreditPercent: real('card_fee_credit_percent').notNull().default(0),
   cardFeeCreditInstallmentPercent: real('card_fee_credit_installment_percent').notNull().default(0),
+  // Para o cabeçalho dos documentos em PDF (Fase 2).
+  address: text('address'),
+  phone: text('phone'),
+  logoPath: text('logo_path'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull()
 })
@@ -32,7 +36,9 @@ export const staffMembers = sqliteTable('staff_members', {
   name: text('name').notNull(),
   role: text('role', { enum: ['owner', 'admin', 'professional', 'receptionist'] }).notNull(),
   pinHash: text('pin_hash').notNull(),
-  active: integer('active', { mode: 'boolean' }).notNull().default(true)
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  // Só vale para cargo "admin": o dono libera acesso a anamnese/odontograma/imagens (Fase 2).
+  clinicalAccess: integer('clinical_access', { mode: 'boolean' }).notNull().default(false)
 })
 
 export const professionals = sqliteTable('professionals', {
@@ -42,6 +48,9 @@ export const professionals = sqliteTable('professionals', {
   specialty: text('specialty'),
   color: text('color'),
   commissionPercent: real('commission_percent').notNull().default(0),
+  // Obrigatórios para emitir receita/atestado (Fase 2).
+  croNumber: text('cro_number'),
+  croUf: text('cro_uf'),
   active: integer('active', { mode: 'boolean' }).notNull().default(true)
 })
 
@@ -52,6 +61,10 @@ export const rooms = sqliteTable('rooms', {
   active: integer('active', { mode: 'boolean' }).notNull().default(true)
 })
 
+// scope define o que o dentista precisa selecionar no odontograma ao usar este
+// procedimento num atendimento ou plano de tratamento (Fase 2).
+export const PROCEDURE_SCOPES = ['nenhum', 'dente', 'face', 'arcada', 'boca'] as const
+
 export const procedureTypes = sqliteTable('procedure_types', {
   ...tenantColumns,
   name: text('name').notNull(),
@@ -59,6 +72,10 @@ export const procedureTypes = sqliteTable('procedure_types', {
   defaultPriceCents: integer('default_price_cents').notNull().default(0),
   requiresRoom: integer('requires_room', { mode: 'boolean' }).notNull().default(false),
   bookableOnline: integer('bookable_online', { mode: 'boolean' }).notNull().default(false),
+  scope: text('scope', { enum: PROCEDURE_SCOPES }).notNull().default('nenhum'),
+  // Código da condição do catálogo do odontograma (shared/odontogram.ts) marcada
+  // automaticamente quando este procedimento é concluído num dente. Nulo = não marca nada.
+  odontogramCondition: text('odontogram_condition'),
   active: integer('active', { mode: 'boolean' }).notNull().default(true)
 })
 
@@ -79,6 +96,19 @@ export const patients = sqliteTable('patients', {
   cpf: text('cpf'),
   notes: text('notes'),
   lgpdConsentAt: text('lgpd_consent_at')
+})
+
+// Alertas de saúde do paciente (alergias, anticoagulante, gestante...). Os de
+// origem "anamnese" são recriados sempre que uma nova anamnese é salva (Fase 2 /
+// Etapa B); os "manuais" são digitados por um profissional e só ele/o dono desativam.
+export const patientAlerts = sqliteTable('patient_alerts', {
+  ...tenantColumns,
+  patientId: text('patient_id').notNull(),
+  text: text('text').notNull(),
+  severity: text('severity', { enum: ['atencao', 'grave'] }).notNull().default('atencao'),
+  origin: text('origin', { enum: ['anamnese', 'manual'] }).notNull(),
+  sourceRecordId: text('source_record_id'), // id do anamnesis_records que gerou (quando origin = anamnese)
+  active: integer('active', { mode: 'boolean' }).notNull().default(true)
 })
 
 export const appointments = sqliteTable('appointments', {

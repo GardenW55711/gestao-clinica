@@ -4,6 +4,8 @@ export interface StaffSummary {
   id: string
   name: string
   role: StaffRole
+  /** Acesso a anamnese/odontograma/imagens (Fase 2). Sempre true para dono/profissional. */
+  clinicalAccess: boolean
 }
 
 export interface UpdateStatus {
@@ -65,6 +67,8 @@ export interface Professional {
   specialty: string | null
   color: string | null
   commissionPercent: number
+  croNumber: string | null
+  croUf: string | null
   active: boolean
 }
 
@@ -73,6 +77,8 @@ export interface ProfessionalInput {
   specialty?: string
   color?: string
   commissionPercent?: number
+  croNumber?: string
+  croUf?: string
 }
 
 export interface Room {
@@ -94,6 +100,8 @@ export interface ProcedureItemUsage {
   defaultQuantity: number
 }
 
+export type ProcedureScope = 'nenhum' | 'dente' | 'face' | 'arcada' | 'boca'
+
 export interface ProcedureType {
   id: string
   name: string
@@ -101,6 +109,8 @@ export interface ProcedureType {
   defaultPriceCents: number
   requiresRoom: boolean
   bookableOnline: boolean
+  scope: ProcedureScope
+  odontogramCondition: string | null
   active: boolean
   items: ProcedureItemUsage[]
 }
@@ -110,6 +120,8 @@ export interface ProcedureTypeInput {
   durationMinutes: number
   defaultPriceCents: number
   requiresRoom: boolean
+  scope: ProcedureScope
+  odontogramCondition?: string | null
   items: { inventoryItemId: string; defaultQuantity: number }[]
 }
 
@@ -132,6 +144,8 @@ export interface Appointment {
   /** Cobrança ligada a este atendimento (se já existir). */
   saleId: string | null
   saleStatus: SaleStatus | null
+  /** Alertas de saúde ativos do paciente (alergia, gestante...), para avisar na agenda. */
+  patientAlerts: PatientAlertSummary[]
 }
 
 export interface AppointmentInput {
@@ -373,6 +387,8 @@ export interface StaffMember {
   role: StaffRole
   active: boolean
   professionalId: string | null
+  /** Só é relevante para role="admin": o dono libera acesso a anamnese/odontograma/imagens. */
+  clinicalAccess: boolean
 }
 
 export interface StaffInput {
@@ -381,6 +397,7 @@ export interface StaffInput {
   pin?: string // obrigatório ao criar; opcional ao editar (só troca se informado)
   active?: boolean
   professionalId?: string | null
+  clinicalAccess?: boolean
 }
 
 export interface CardFees {
@@ -394,6 +411,37 @@ export interface ClinicSettings {
   clinicName: string
   selfBookingEnabled: boolean
   cardFees: CardFees
+  address: string | null
+  phone: string | null
+  logoPath: string | null
+}
+
+export interface ClinicProfileInput {
+  address?: string
+  phone?: string
+}
+
+// ---------- Fase 2 / Etapa A: alertas de saúde do paciente ----------
+
+export type PatientAlertSeverity = 'atencao' | 'grave'
+export type PatientAlertOrigin = 'anamnese' | 'manual'
+
+export interface PatientAlertSummary {
+  id: string
+  text: string
+  severity: PatientAlertSeverity
+}
+
+export interface PatientAlert extends PatientAlertSummary {
+  origin: PatientAlertOrigin
+  active: boolean
+  createdAt: string
+}
+
+export interface PatientAlertInput {
+  patientId: string
+  text: string
+  severity: PatientAlertSeverity
 }
 
 export interface BookingRequestSummary {

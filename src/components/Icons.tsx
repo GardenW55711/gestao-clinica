@@ -80,12 +80,37 @@ const PATHS: Record<string, ReactNode> = {
       <rect x="4" y="5" width="16" height="14" rx="3" />
       <path d="M8 10h8M8 14h5" />
     </>
+  ),
+  alert: (
+    <>
+      <path d="M12 3.5 22 20.5H2z" />
+      <path d="M12 10v4.5" />
+      <circle cx="12" cy="17.5" r="0.6" fill="currentColor" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <circle cx="9" cy="10" r="1.8" />
+      <path d="m5 18 5-5 3.5 3.5L18 12l1.5 1.5" />
+    </>
+  ),
+  document: (
+    <>
+      <path d="M7 3.5h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z" />
+      <path d="M14 3.5v4h4M9 12.5h6M9 16h6" />
+    </>
+  ),
+  tooth: (
+    <>
+      <path d="M12 4c-2.4 0-3.6 1.3-4.7 1.3S5 4.5 4 4.9c-1.3.5-1.6 2.4-1 4.4.5 1.8 1.2 2.9 1.4 5 .2 1.9 1 6.7 2.6 6.7 1.5 0 1.2-4.2 2.2-5.6.7-1 1.6-1 1.8 0 .7 3 .8 5.6 2.2 5.6 1.6 0 2.4-4.8 2.6-6.7.2-2.1.9-3.2 1.4-5 .6-2 .3-3.9-1-4.4-1-.4-2.2.4-3.3.4S14.4 4 12 4z" />
+    </>
   )
 }
 
 export type IconName = keyof typeof PATHS
 
-export function Icon({ name, size = 20 }: { name: IconName; size?: number }): JSX.Element {
+export function Icon({ name, size = 20, className }: { name: IconName; size?: number; className?: string }): JSX.Element {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -97,7 +122,7 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }): JS
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      className="icon"
+      className={className ? `icon ${className}` : 'icon'}
     >
       {PATHS[name]}
     </svg>

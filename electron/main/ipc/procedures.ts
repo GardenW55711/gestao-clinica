@@ -4,9 +4,10 @@ import { and, eq, isNull } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { getDb } from '../db/client'
 import * as schema from '../db/schema'
-import { inventoryItems, procedureTypeItems, procedureTypes } from '../db/schema'
+import { inventoryItems, PROCEDURE_SCOPES, procedureTypeItems, procedureTypes } from '../db/schema'
 import { getCurrentClinicId } from '../session'
 import { MANAGERS, requireRole } from './util'
+import { odontogramConditionMap } from '@shared/odontogram'
 import type { ApiResult, ProcedureItemUsage, ProcedureType, ProcedureTypeInput } from '@shared/types'
 
 type Db = BetterSQLite3Database<typeof schema>
@@ -25,6 +26,10 @@ function validate(input: ProcedureTypeInput): void {
   if (!input.name?.trim()) throw new Error('Informe o nome do procedimento')
   if (!(input.durationMinutes > 0)) throw new Error('A duração precisa ser maior que zero')
   if (input.defaultPriceCents < 0) throw new Error('O preço não pode ser negativo')
+  if (!PROCEDURE_SCOPES.includes(input.scope)) throw new Error('Escolha o que este procedimento usa no odontograma')
+  if (input.odontogramCondition && !odontogramConditionMap.has(input.odontogramCondition)) {
+    throw new Error('Condição do odontograma inválida')
+  }
   for (const item of input.items ?? []) {
     if (!(item.defaultQuantity > 0)) throw new Error('A quantidade padrão de cada produto precisa ser maior que zero')
   }
@@ -63,6 +68,8 @@ function toDto(row: typeof procedureTypes.$inferSelect, usage: Map<string, Proce
     defaultPriceCents: row.defaultPriceCents,
     requiresRoom: row.requiresRoom,
     bookableOnline: row.bookableOnline,
+    scope: row.scope,
+    odontogramCondition: row.odontogramCondition,
     active: row.active,
     items: usage.get(row.id) ?? []
   }
@@ -147,6 +154,8 @@ export function registerProcedureHandlers(): void {
             defaultPriceCents: input.defaultPriceCents,
             requiresRoom: input.requiresRoom,
             bookableOnline: false,
+            scope: input.scope,
+            odontogramCondition: input.odontogramCondition || null,
             active: true,
             createdAt: timestamp,
             updatedAt: timestamp,
@@ -180,6 +189,8 @@ export function registerProcedureHandlers(): void {
               durationMinutes: params.input.durationMinutes,
               defaultPriceCents: params.input.defaultPriceCents,
               requiresRoom: params.input.requiresRoom,
+              scope: params.input.scope,
+              odontogramCondition: params.input.odontogramCondition || null,
               updatedAt: nowIso(),
               syncStatus: 'pending'
             })

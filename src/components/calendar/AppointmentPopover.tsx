@@ -1,6 +1,7 @@
 import type { Appointment } from '@shared/types'
 import { STATUS_META, formatClock } from '../../utils/calendar'
 import { useEscapeKey } from '../../utils/useEscapeKey'
+import { AlertBanner } from '../AlertBanner'
 import { Icon } from '../Icons'
 
 interface Props {
@@ -49,6 +50,8 @@ export function AppointmentPopover({ appt, anchor, color, canEdit = true, onClos
 
         <h3 className="popover-title">{appt.patientName}</h3>
         <p className="popover-proc">{appt.procedureTypeName}</p>
+
+        <AlertBanner alerts={appt.patientAlerts} />
 
         <ul className="popover-info">
           <li>

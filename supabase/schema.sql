@@ -535,3 +535,50 @@ from public.schedule_blocks
 where deleted_at is null
   and clinic_id in (select id from public.clinics where self_booking_enabled = true);
 grant select on public.public_schedule_blocks to anon;
+
+-- ============================================================
+-- Fase 2 / Etapa A: prontuário clínico — base
+-- Nenhuma tabela clínica desta fase (patient_alerts e as que vêm nas próximas
+-- etapas) é exposta às views/políticas "anon" do autoagendamento acima.
+-- ============================================================
+
+-- Cabeçalho dos documentos em PDF
+alter table public.clinics add column if not exists address text;
+alter table public.clinics add column if not exists phone text;
+alter table public.clinics add column if not exists logo_path text;
+
+-- Só vale para cargo "admin": o dono libera acesso clínico (anamnese/odontograma/imagens)
+alter table public.staff_members add column if not exists clinical_access boolean not null default false;
+
+-- Obrigatórios para emitir receita/atestado
+alter table public.professionals add column if not exists cro_number text;
+alter table public.professionals add column if not exists cro_uf text;
+
+-- O que o dentista seleciona no odontograma ao usar o procedimento, e a marcação
+-- automática correspondente (código do catálogo em shared/odontogram.ts)
+alter table public.procedure_types add column if not exists scope text not null default 'nenhum';
+alter table public.procedure_types drop constraint if exists procedure_types_scope_check;
+alter table public.procedure_types add constraint procedure_types_scope_check
+  check (scope in ('nenhum','dente','face','arcada','boca'));
+alter table public.procedure_types add column if not exists odontogram_condition text;
+
+-- Alertas de saúde do paciente (alergias, anticoagulante, gestante...)
+create table if not exists public.patient_alerts (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  patient_id uuid not null,
+  text text not null,
+  severity text not null default 'atencao' check (severity in ('atencao','grave')),
+  origin text not null check (origin in ('anamnese','manual')),
+  source_record_id uuid,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.patient_alerts enable row level security;
+drop policy if exists "clinic manages its patient alerts" on public.patient_alerts;
+create policy "clinic manages its patient alerts"
+  on public.patient_alerts for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));

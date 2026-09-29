@@ -15,7 +15,8 @@ export function ConfiguracoesLayout(): JSX.Element {
           { to: '/configuracoes/horarios', label: 'Horários' },
           { to: '/configuracoes/bloqueios', label: 'Bloqueios' },
           { to: '/configuracoes/taxas', label: 'Taxas de cartão' },
-          { to: '/configuracoes/funcionarios', label: 'Funcionários' }
+          { to: '/configuracoes/funcionarios', label: 'Funcionários' },
+          { to: '/configuracoes/clinica', label: 'Dados da clínica' }
         ]}
       />
       <Outlet />

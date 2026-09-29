@@ -1,4 +1,7 @@
 import { ipcMain } from 'electron'
+import { eq } from 'drizzle-orm'
+import { getDb } from '../db/client'
+import { staffMembers } from '../db/schema'
 import { getCurrentClinicId, getCurrentStaffMemberId, getCurrentStaffRole } from '../session'
 import type { ApiResult, StaffRole } from '@shared/types'
 
@@ -34,6 +37,26 @@ export function requireRole(...allowed: StaffRole[]): StaffRole {
 export const MANAGERS: StaffRole[] = ['owner', 'admin']
 export const EVERYONE: StaffRole[] = ['owner', 'admin', 'professional', 'receptionist']
 export const NOT_PROFESSIONAL: StaffRole[] = ['owner', 'admin', 'receptionist']
+
+/**
+ * Acesso clínico (Fase 2): dono e profissional sempre têm; administrador só se
+ * o dono liberou (`staff_members.clinical_access`); recepção nunca. Usado para
+ * anamnese completa, odontograma, plano, evolução e imagens clínicas.
+ */
+export function hasClinicalAccess(): boolean {
+  const role = getCurrentStaffRole()
+  if (role === 'owner' || role === 'professional') return true
+  if (role !== 'admin') return false
+  const id = getCurrentStaffMemberId()
+  if (!id) return false
+  const row = getDb().select({ clinicalAccess: staffMembers.clinicalAccess }).from(staffMembers).where(eq(staffMembers.id, id)).get()
+  return row?.clinicalAccess ?? false
+}
+
+export function requireClinicalAccess(): void {
+  requireRole(...EVERYONE)
+  if (!hasClinicalAccess()) throw new Error('Você não tem acesso liberado aos dados clínicos deste paciente')
+}
 
 export function currentStaff(): { id: string | null; role: StaffRole | null } {
   return { id: getCurrentStaffMemberId(), role: getCurrentStaffRole() }
