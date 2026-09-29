@@ -1,7 +1,8 @@
 import { ipcMain } from 'electron'
+import { randomUUID } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../db/client'
-import { staffMembers } from '../db/schema'
+import { auditLog, staffMembers } from '../db/schema'
 import { getCurrentClinicId, getCurrentStaffMemberId, getCurrentStaffRole } from '../session'
 import type { ApiResult, StaffRole } from '@shared/types'
 
@@ -58,6 +59,28 @@ export function requireClinicalAccess(): void {
   if (!hasClinicalAccess()) throw new Error('Você não tem acesso liberado aos dados clínicos deste paciente')
 }
 
+/**
+ * Registro de auditoria (LGPD: dado de saúde é sensível). Usado para abertura
+ * de prontuário, criação de registros clínicos e impressão de documentos.
+ */
+export function writeAudit(action: string, entity: string, entityId: string | null = null, details: string | null = null): void {
+  const clinicId = getCurrentClinicId()
+  if (!clinicId) return
+  getDb()
+    .insert(auditLog)
+    .values({
+      id: randomUUID(),
+      clinicId,
+      staffMemberId: getCurrentStaffMemberId(),
+      action,
+      entity,
+      entityId,
+      at: new Date().toISOString(),
+      details
+    })
+    .run()
+}
+
 export function currentStaff(): { id: string | null; role: StaffRole | null } {
   return { id: getCurrentStaffMemberId(), role: getCurrentStaffRole() }
 }
@@ -69,12 +92,12 @@ export function currentStaff(): { id: string | null; role: StaffRole | null } {
 export function handle<A, R>(
   channel: string,
   roles: StaffRole[] | null,
-  fn: (arg: A) => R
+  fn: (arg: A) => R | Promise<R>
 ): void {
-  ipcMain.handle(channel, (_event, arg: A): ApiResult<R> => {
+  ipcMain.handle(channel, async (_event, arg: A): Promise<ApiResult<R>> => {
     try {
       if (roles) requireRole(...roles)
-      return { ok: true, data: fn(arg) }
+      return { ok: true, data: await fn(arg) }
     } catch (error) {
       return { ok: false, error: (error as Error).message }
     }

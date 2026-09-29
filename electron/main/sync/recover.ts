@@ -21,7 +21,9 @@ import {
   expenses,
   professionalWorkingHours,
   scheduleBlocks,
-  patientAlerts
+  patientAlerts,
+  anamnesisTemplates,
+  anamnesisRecords
 } from '../db/schema'
 import { eq, isNull } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
@@ -405,6 +407,41 @@ export async function recoverClinicFromCloud(params: {
           origin: r.origin,
           sourceRecordId: r.source_record_id,
           active: r.active,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          syncStatus: 'synced',
+          deletedAt: r.deleted_at
+        })
+      ],
+      [
+        'anamnesis_templates',
+        anamnesisTemplates,
+        'anamnesis_templates',
+        (r) => ({
+          id: r.id,
+          clinicId: r.clinic_id,
+          name: r.name,
+          questionsJson: JSON.stringify(r.questions_json),
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          syncStatus: 'synced',
+          deletedAt: r.deleted_at
+        })
+      ],
+      [
+        'anamnesis_records',
+        anamnesisRecords,
+        'anamnesis_records',
+        (r) => ({
+          id: r.id,
+          clinicId: r.clinic_id,
+          patientId: r.patient_id,
+          templateName: r.template_name,
+          questionsJson: JSON.stringify(r.questions_json),
+          answersJson: JSON.stringify(r.answers_json),
+          filledByName: r.filled_by_name,
+          filledAt: r.filled_at,
+          signedOnPaperAt: r.signed_on_paper_at,
           createdAt: r.created_at,
           updatedAt: r.updated_at,
           syncStatus: 'synced',

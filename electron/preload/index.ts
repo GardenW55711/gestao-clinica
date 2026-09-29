@@ -48,6 +48,7 @@ import type {
   PatientAlert,
   PatientAlertInput
 } from '@shared/types'
+import type { AnamnesisRecord, AnamnesisRecordInput, AnamnesisTemplate, AnamnesisTemplateInput } from '@shared/anamnesis'
 import type { Range } from '@shared/indicators'
 
 function crudApi<Dto, Input>(prefix: string): {
@@ -170,6 +171,23 @@ const api = {
     setProfile: (input: ClinicProfileInput): Promise<ApiResult<null>> => ipcRenderer.invoke('clinic:setProfile', input),
     setLogo: (dataUrl: string | null): Promise<ApiResult<null>> => ipcRenderer.invoke('clinic:setLogo', dataUrl),
     getLogoDataUrl: (): Promise<ApiResult<string | null>> => ipcRenderer.invoke('clinic:getLogoDataUrl')
+  },
+  anamnesisTemplates: {
+    list: (): Promise<ApiResult<AnamnesisTemplate[]>> => ipcRenderer.invoke('anamnesisTemplates:list'),
+    create: (input: AnamnesisTemplateInput): Promise<ApiResult<AnamnesisTemplate>> =>
+      ipcRenderer.invoke('anamnesisTemplates:create', input),
+    update: (id: string, input: AnamnesisTemplateInput): Promise<ApiResult<AnamnesisTemplate>> =>
+      ipcRenderer.invoke('anamnesisTemplates:update', { id, input }),
+    remove: (id: string): Promise<ApiResult<null>> => ipcRenderer.invoke('anamnesisTemplates:remove', id)
+  },
+  anamnesisRecords: {
+    listByPatient: (patientId: string): Promise<ApiResult<AnamnesisRecord[]>> =>
+      ipcRenderer.invoke('anamnesisRecords:listByPatient', patientId),
+    create: (input: AnamnesisRecordInput): Promise<ApiResult<AnamnesisRecord>> =>
+      ipcRenderer.invoke('anamnesisRecords:create', input),
+    markSignedOnPaper: (id: string, date: string): Promise<ApiResult<null>> =>
+      ipcRenderer.invoke('anamnesisRecords:markSignedOnPaper', { id, date }),
+    print: (id: string): Promise<ApiResult<string>> => ipcRenderer.invoke('anamnesisRecords:print', id)
   },
   patientAlerts: {
     list: (patientId: string): Promise<ApiResult<PatientAlert[]>> => ipcRenderer.invoke('patientAlerts:list', patientId),

@@ -582,3 +582,47 @@ create policy "clinic manages its patient alerts"
   on public.patient_alerts for all
   using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
   with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+-- ============================================================
+-- Fase 2 / Etapa B: anamnese
+-- Documento legal e imutável: o app nunca faz update nem delete físico aqui,
+-- só insere um registro novo. As perguntas e respostas ficam num JSON (mesmo
+-- formato guardado localmente), pra não precisar mudar o schema a cada campo novo.
+-- ============================================================
+
+create table if not exists public.anamnesis_templates (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  name text not null,
+  questions_json jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.anamnesis_templates enable row level security;
+drop policy if exists "clinic manages its anamnesis templates" on public.anamnesis_templates;
+create policy "clinic manages its anamnesis templates"
+  on public.anamnesis_templates for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));
+
+create table if not exists public.anamnesis_records (
+  id uuid primary key,
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  patient_id uuid not null,
+  template_name text not null,
+  questions_json jsonb not null,
+  answers_json jsonb not null,
+  filled_by_name text not null,
+  filled_at timestamptz not null,
+  signed_on_paper_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+alter table public.anamnesis_records enable row level security;
+drop policy if exists "clinic manages its anamnesis records" on public.anamnesis_records;
+create policy "clinic manages its anamnesis records"
+  on public.anamnesis_records for all
+  using (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()))
+  with check (clinic_id in (select id from public.clinics where auth_user_id = auth.uid()));

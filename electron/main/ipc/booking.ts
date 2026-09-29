@@ -16,6 +16,19 @@ function logoFullPath(filename: string): string {
   return join(app.getPath('userData'), filename)
 }
 
+/** Nome, endereço, telefone e logo (já em data URL) para o cabeçalho dos documentos em PDF. */
+export function loadClinicHeaderInfo(): { name: string; address: string | null; phone: string | null; logoDataUrl: string | null } {
+  const clinic = getDb().select().from(clinics).get()
+  if (!clinic) throw new Error('Clínica não encontrada')
+  let logoDataUrl: string | null = null
+  if (clinic.logoPath && existsSync(logoFullPath(clinic.logoPath))) {
+    const ext = clinic.logoPath.split('.').pop() ?? ''
+    const mime = LOGO_MIME_BY_EXT[ext] ?? 'application/octet-stream'
+    logoDataUrl = `data:${mime};base64,${readFileSync(logoFullPath(clinic.logoPath)).toString('base64')}`
+  }
+  return { name: clinic.name, address: clinic.address, phone: clinic.phone, logoDataUrl }
+}
+
 function nowIso(): string {
   return new Date().toISOString()
 }

@@ -14,6 +14,7 @@ import { registerScheduleHandlers } from './ipc/schedule'
 import { registerStaffHandlers } from './ipc/staff'
 import { registerReportHandlers } from './ipc/reports'
 import { registerPatientAlertHandlers } from './ipc/patientAlerts'
+import { registerAnamnesisHandlers } from './ipc/anamnesis'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -71,6 +72,7 @@ app.whenReady().then(() => {
   registerStaffHandlers()
   registerReportHandlers()
   registerPatientAlertHandlers()
+  registerAnamnesisHandlers()
 
   createWindow()
 

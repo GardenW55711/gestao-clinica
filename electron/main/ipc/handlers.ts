@@ -16,6 +16,7 @@ import { syncClinicAndStaff } from '../sync/engine'
 import { recoverClinicFromCloud } from '../sync/recover'
 import { setCurrentSession, getCurrentClinicId, setCurrentStaffMember } from '../session'
 import { hasClinicalAccess } from './util'
+import { seedAnamnesisTemplates } from './anamnesis'
 import type { ApiResult, ClinicLoginResult, ClinicSetupInput, ClinicRecoverInput, StaffSummary } from '@shared/types'
 
 function nowIso(): string {
@@ -118,6 +119,7 @@ export function registerIpcHandlers(): void {
         .run()
 
       writeAudit(clinicId, ownerId, 'clinic_created', 'clinics')
+      seedAnamnesisTemplates(clinicId)
       setCurrentSession(clinicId)
 
       // Tenta criar a conta da clínica na nuvem e subir os dados em segundo

@@ -22,7 +22,9 @@ import {
   expenses,
   professionalWorkingHours,
   scheduleBlocks,
-  patientAlerts
+  patientAlerts,
+  anamnesisTemplates,
+  anamnesisRecords
 } from '../db/schema'
 
 /**
@@ -414,6 +416,35 @@ export async function syncClinicAndStaff(clinicId: string): Promise<{ ok: boolea
         origin: row.origin,
         source_record_id: row.sourceRecordId,
         active: row.active,
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      }))
+    )
+
+    await pushMoneyTable('anamnesis_templates', () =>
+      pushPendingTable(supabase, anamnesisTemplates, 'anamnesis_templates', (row) => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        name: row.name,
+        questions_json: JSON.parse(row.questionsJson as string),
+        created_at: row.createdAt,
+        updated_at: row.updatedAt,
+        deleted_at: row.deletedAt
+      }))
+    )
+
+    await pushMoneyTable('anamnesis_records', () =>
+      pushPendingTable(supabase, anamnesisRecords, 'anamnesis_records', (row) => ({
+        id: row.id,
+        clinic_id: row.clinicId,
+        patient_id: row.patientId,
+        template_name: row.templateName,
+        questions_json: JSON.parse(row.questionsJson as string),
+        answers_json: JSON.parse(row.answersJson as string),
+        filled_by_name: row.filledByName,
+        filled_at: row.filledAt,
+        signed_on_paper_at: row.signedOnPaperAt,
         created_at: row.createdAt,
         updated_at: row.updatedAt,
         deleted_at: row.deletedAt

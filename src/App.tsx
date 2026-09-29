@@ -37,6 +37,7 @@ import { Bloqueios } from './pages/configuracoes/Bloqueios'
 import { Taxas } from './pages/configuracoes/Taxas'
 import { Funcionarios } from './pages/configuracoes/Funcionarios'
 import { DadosClinica } from './pages/configuracoes/DadosClinica'
+import { AnamnesisTemplates } from './pages/configuracoes/AnamnesisTemplates'
 import { ClinicContext } from './context/ClinicContext'
 import type { ClinicLoginResult, StaffSummary } from '@shared/types'
 
@@ -143,6 +144,7 @@ function App(): JSX.Element {
               <Route path="taxas" element={<Taxas />} />
               <Route path="funcionarios" element={<Funcionarios />} />
               <Route path="clinica" element={<DadosClinica />} />
+              <Route path="anamnese" element={<AnamnesisTemplates />} />
             </Route>
           </Route>
         </Routes>

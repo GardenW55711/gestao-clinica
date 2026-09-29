@@ -111,6 +111,26 @@ export const patientAlerts = sqliteTable('patient_alerts', {
   active: integer('active', { mode: 'boolean' }).notNull().default(true)
 })
 
+// Modelo de anamnese: perguntas guardadas como JSON (AnamnesisQuestion[] em shared/anamnesis.ts).
+export const anamnesisTemplates = sqliteTable('anamnesis_templates', {
+  ...tenantColumns,
+  name: text('name').notNull(),
+  questionsJson: text('questions_json').notNull()
+})
+
+// Registro imutável: guarda uma CÓPIA do modelo e das respostas no momento do
+// preenchimento (documento legal — nunca é editado, só um novo é criado).
+export const anamnesisRecords = sqliteTable('anamnesis_records', {
+  ...tenantColumns,
+  patientId: text('patient_id').notNull(),
+  templateName: text('template_name').notNull(),
+  questionsJson: text('questions_json').notNull(),
+  answersJson: text('answers_json').notNull(),
+  filledByName: text('filled_by_name').notNull(),
+  filledAt: text('filled_at').notNull(),
+  signedOnPaperAt: text('signed_on_paper_at')
+})
+
 export const appointments = sqliteTable('appointments', {
   ...tenantColumns,
   patientId: text('patient_id').notNull(),

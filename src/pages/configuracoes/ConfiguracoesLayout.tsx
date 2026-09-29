@@ -16,7 +16,8 @@ export function ConfiguracoesLayout(): JSX.Element {
           { to: '/configuracoes/bloqueios', label: 'Bloqueios' },
           { to: '/configuracoes/taxas', label: 'Taxas de cartão' },
           { to: '/configuracoes/funcionarios', label: 'Funcionários' },
-          { to: '/configuracoes/clinica', label: 'Dados da clínica' }
+          { to: '/configuracoes/clinica', label: 'Dados da clínica' },
+          { to: '/configuracoes/anamnese', label: 'Modelos de anamnese' }
         ]}
       />
       <Outlet />
